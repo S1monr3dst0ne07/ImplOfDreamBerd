@@ -62,10 +62,11 @@ class AstCall:
     def run(self):
         params = [x.eval() for x in self.params]
 
-        match self.name:
-            case 'print':
-                print(*params)
+        funcs = {
+            'print': lambda x: (print(x), "<print function>")[1],
+        }
 
+        return funcs[self.name](*params)
 
 
 @dc
@@ -85,7 +86,10 @@ class AstStmt:
         return cls(sub, token.content)
 
     def run(self):
-        self.sub.run()
+        res = self.sub.run()
+        
+        match self.eos:
+            case "?": print(f"[DEBUG] {res}")
 
 @dc
 class AstProg:
