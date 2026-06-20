@@ -9,6 +9,7 @@ def get_kind(char):
         case '!': return 'eos'
         case '?': return 'debug'
         case ' ': return 'space'
+        case x if x.isdigit(): return 'numb'
         case _: return 'sym'
 
 
@@ -41,7 +42,8 @@ class Streamer:
     # in circumstances where it doesn't matter
     def space(self):
         if self.peekt().kind == "space":
-            self.pop()
+            return len(self.pop())
+        return 0
         
 
 

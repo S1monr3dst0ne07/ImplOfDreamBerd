@@ -3,6 +3,7 @@ import typing
 from dataclasses import dataclass as dc
 
 import error
+import sym
 
 
 @dc
@@ -34,18 +35,66 @@ class AstLeaf:
     def parse(cls, stream):
         stream.space()
         match stream.peekt().kind:
+            case 'numb':  leaf = int(stream.pop())
             case 'quote': leaf = cls._parse_string(stream)
+            case x: error.error(f"Unknown leaf kind: {stream.popt()}")
         stream.space()
         return cls(leaf)
 
     def eval(self):
         return self.value
-        
+
+
+class AstUn:
+    op : str
+    sub : AstLeaf
+
+    @classmethod
+    def parse(cls, stream):
+        if stream.peek() not in sym.un_op:
+            return AstLeaf.parse(stream)
+
+        op = stream.pop()
+        stream.space() #the spec makes no mention of unary operator separation 
+        sub = Astream.parse(stream)
+        return cls(op, sub)
+
+
+@dc
+class AstExpr:
+    space : int 
+        # how much whitespace surround the operators? 
+        # used for graph rewriting
+
+    op : str
+    left  : "AstExpr | AstUn | AstLeaf"
+    right : "AstExpr | AstUn | AstLeaf"
+
+    @classmethod
+    def parse(cls, stream):
+        left = AstUn.parse(stream)
+        left_space = stream.space()
+
+        if stream.peek() not in sym.op:
+            return left
+
+        op = stream.pop()
+        right_space = stream.space()
+        right = AstUn.parse(stream)
+        return cls(
+            max(left_space, right_space),
+            left = left,
+            right = right,
+            op = op
+        )
+
+
+
 
 @dc
 class AstCall:
     name : str
-    params : list[AstLeaf]
+    params : list[typing.Any]
 
     @classmethod
     def parse(cls, stream):
@@ -53,7 +102,7 @@ class AstCall:
         params = []
 
         while stream.peekt().kind not in ('eos', 'debug'):
-            params.append(AstLeaf.parse(stream))
+            params.append(AstExpr.parse(stream))
             if stream.peek() != ',': break
             stream.pop()
 
@@ -100,6 +149,7 @@ class AstProg:
     def parse(cls, stream):
         content = []
         while stream.has():
+            stream.space()
             content.append(AstStmt.parse(stream))
 
         return cls(content)
