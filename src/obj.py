@@ -7,6 +7,7 @@ import error
 
 @dc
 class AstLeaf:
+    value : typing.Any
 
     @staticmethod
     def _compute_quote_size(token):
@@ -35,7 +36,10 @@ class AstLeaf:
         match stream.peekt().kind:
             case 'quote': leaf = cls._parse_string(stream)
         stream.space()
-        return leaf
+        return cls(leaf)
+
+    def eval(self):
+        return self.value
         
 
 @dc
@@ -55,6 +59,13 @@ class AstCall:
 
         return cls(name, params)
 
+    def run(self):
+        params = [x.eval() for x in self.params]
+
+        match self.name:
+            case 'print':
+                print(*params)
+
 
 
 @dc
@@ -73,9 +84,12 @@ class AstStmt:
 
         return cls(sub, token.content)
 
+    def run(self):
+        self.sub.run()
+
 @dc
 class AstProg:
-    content : list
+    content : list[AstStmt]
 
     
     @classmethod
@@ -85,6 +99,11 @@ class AstProg:
             content.append(AstStmt.parse(stream))
 
         return cls(content)
+
+    def run(self):
+        for stmt in self.content:
+            stmt.run()
+
             
 
 
