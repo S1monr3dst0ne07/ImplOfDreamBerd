@@ -88,6 +88,18 @@ class AstExpr:
             op = op
         )
 
+    def eval(self):
+        left  = self.left.eval()
+        right = self.left.eval()
+
+        match self.op:
+            case '+': res = left + right
+            case '-': res = left - right
+            case '*': res = left * right
+            case '/': res = left / right
+
+        return res
+
 
 
 
