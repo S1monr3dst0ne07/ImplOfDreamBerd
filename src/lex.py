@@ -21,6 +21,29 @@ class Token:
 class Streamer:
     stream : list[Token]
 
+    def peekt(self):
+        return self.stream[0]
+
+    def popt(self):
+        return self.stream.pop(0)
+
+    def peek(self):
+        return self.peekt().content
+
+    def pop(self):
+        return self.popt().content
+
+    def has(self):
+        return len(self.stream) > 0
+
+    #DB has significant whitespace which means it cannot be
+    # discarded by the lexer. Streamer.space skips whitespace
+    # in circumstances where it doesn't matter
+    def space(self):
+        if self.peekt().kind == "space":
+            self.pop()
+        
+
 
 def tokenize(path):
     with open(path, 'r') as f:
