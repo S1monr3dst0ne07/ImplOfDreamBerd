@@ -226,7 +226,6 @@ class AstDecl:
             error.token(stream.pop(), "`const` / `var` not followed by `const` / `var`.")
         editable = {'const' : False, 'var' : True}[stream.pop()]
 
-
         name = stream.pop()
 
         if stream.peek() != '=':
@@ -249,7 +248,26 @@ class AstDecl:
         ctx.scope[self.name] = init
 
 
+@dc
+class AstAssign:
+    dst : typing.Any
+    src : typing.Any
 
+    @classmethod
+    def parse(cls, stream):
+        dst = AstExpr.parse(stream)
+        stream.expect('=')
+        src = AstExpr.parse(stream)
+
+        return cls(dst, src)
+
+    def run(self, ctx):
+        dst = self.dst.eval(ctx)
+        src = self.src.eval(ctx)
+        dst._assign()
+
+        dst.content = src.content
+        dst.kind    = src.kind
 
 @dc
 class AstStmt:
@@ -262,20 +280,25 @@ class AstStmt:
         stream.space()
 
         need_eos = True
-        tmp = stream.peek()
-        match tmp:
-            case '}': return AstBlock.BlockClose
-            case '{':  #}
+        first, second = stream.lookhead(2)
+        match first.content, second.content:
+            case '}', _: return AstBlock.BlockClose
+            case '{', _:  #}
                 sub = AstBlock.parse(stream)
                 need_eos = False
-            case 'if': 
+            case 'if', _: 
                 sub = AstIf.parse(stream)
                 need_eos = False
 
-            case x if x in ('const', 'var'):
+            case _, '=':
+                sub = AstAssign.parse(stream)
+
+            case x, y if all(i in ('const', 'var') for i in (x, y)):
                 sub = AstDecl.parse(stream)
 
-            case x: sub = AstCall.parse(stream)
+            case x: 
+                sub = AstCall.parse(stream)
+
 
 
 

@@ -74,6 +74,11 @@ class Streamer:
         if tok.content != should:
             error.token(tok, f"Expected `{should}` but go `{tok.content}`.")
 
+    def lookhead(self, count):
+        toks = [self.popt() for _ in range(count)]
+        self.stream = toks + self.stream
+        return toks
+
 
 def tokenize(path):
     with open(path, 'r') as f:
