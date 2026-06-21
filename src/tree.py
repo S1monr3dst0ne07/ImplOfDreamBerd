@@ -221,11 +221,12 @@ class AstDecl:
 
     @classmethod
     def parse(cls, stream):
-        editable = {'const' : False, 'var' : True}[stream.pop()]
+        assignable = {'const' : False, 'var' : True}[stream.pop()]
         if stream.peek() not in ('const', 'var'):
             error.token(stream.pop(), "`const` / `var` not followed by `const` / `var`.")
+        editable = {'const' : False, 'var' : True}[stream.pop()]
 
-        assignable = {'const' : False, 'var' : True}[stream.pop()]
+
         name = stream.pop()
 
         if stream.peek() != '=':
@@ -242,8 +243,8 @@ class AstDecl:
 
         init = self.expr.eval(ctx)
 
-        init.editable = self.editable,
-        init.assignable = self.assignable,
+        init.editable = self.editable
+        init.assignable = self.assignable
 
         ctx.scope[self.name] = init
 

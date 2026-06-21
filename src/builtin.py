@@ -6,10 +6,24 @@ class Builtin:
         print(value.content)
         return "<print>"
 
+    def _null():
+        return obj.Value(
+            content=None,
+            kind='null',
+            editable = False,
+            assignable = True,
+        )
 
     def pop(value):
-        print(value)
+        value._edit()
+        
+        res = Builtin._null()
+        match value.kind:
+            case 'string':
+                res, *tail = value.content
+                value.content = "".join(tail)
 
+        return res
 
 
 def get_all():
