@@ -7,6 +7,5 @@ def error(msg):
     sys.exit(1)
 
 def token(token, msg):
-    #! TODO: implement lines information
-    print(f"Error: {msg}")
+    print(f"Error on line {token.line}: {msg}")
     sys.exit(1)

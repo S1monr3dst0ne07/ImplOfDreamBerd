@@ -25,6 +25,8 @@ class Token:
     content : str
     kind : str
 
+    line : int
+
 @dc
 class Streamer:
     stream : list[Token]
@@ -94,18 +96,23 @@ def tokenize(path):
 
     stream = []
     buffer = ""
+    line = 0
 
     state = None
     for char in graphemes:
         kind = get_kind(char)
 
+
         if kind != state and state:
             stream.append(Token(
-                buffer, state
+                buffer, state, line
             ))
             buffer = ""
 
         state = kind
         buffer += char
+
+        if char == '\n':
+            line += 1
 
     return Streamer(stream)

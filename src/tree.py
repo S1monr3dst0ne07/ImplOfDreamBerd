@@ -125,6 +125,9 @@ class AstLeaf:
         if type(self.value) is AstScopeAccess:
             return self.value.run(ctx)
 
+        if self.value.kind == 'numb' and self.value.content in ctx.literal_numb_mapper:
+            return obj.Value(content=ctx.literal_numb_mapper[self.value.content], kind='numb')
+
         return self.value
 
 
