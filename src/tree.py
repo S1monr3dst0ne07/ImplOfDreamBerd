@@ -301,16 +301,16 @@ class AstBlock:
     class BlockClose: pass
 
     @classmethod
-    def parse(cls, stream):
-        stream.expect('{')
+    def parse(cls, stream, prog=False):
+        if not prog: stream.expect('{')
 
         stmts = []
-        while True:
+        while stream.has():
             sub = AstStmt.parse(stream)
             if sub == cls.BlockClose: break
             stmts.append(sub)
 
-        stream.expect('}')
+        if not prog: stream.expect('}')
         return cls(stmts)
 
     def run(self, ctx, offset=1, index=0):
@@ -319,11 +319,10 @@ class AstBlock:
 
         if len(self.stmts) == step:
             return res
-            
 
         #pass continuation into context scheduler.
         # this is some fucking haskell level programming right here.
-        return ctx.scheduler(lambda: self.run(ctx, step))
+        return ctx.scheduler(lambda: self.run(ctx, offset, step))
 
 
 
@@ -495,23 +494,17 @@ class AstStmt:
 
 @dc
 class AstProg:
-    content : list[AstStmt]
+    content : AstBlock
 
     
     @classmethod
     def parse(cls, stream):
-        content = []
-        while stream.has():
-            content.append(AstStmt.parse(stream))
-
-        return cls(content)
+        return cls(AstBlock.parse(stream, prog=True))
 
     def run(self, ctx):
         builtin.inject(ctx)
 
-        for stmt in self.content:
-            stmt.run(ctx)
-
+        self.content.run(ctx)
             
 
 

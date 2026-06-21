@@ -10,7 +10,6 @@ def main():
 
     stream = lex.tokenize(path)
     root = tree.AstProg.parse(stream)
-    print(root)
     ctx = obj.Ctx()
     root.run(ctx)
 

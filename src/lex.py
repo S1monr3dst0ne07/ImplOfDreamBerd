@@ -1,7 +1,8 @@
 
 from dataclasses import dataclass as dc
-
 import regex
+
+import error
 
 
 def get_kind(char):

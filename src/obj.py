@@ -54,3 +54,8 @@ class Ctx:
 
 
 
+    def scheduler(self, continuation):
+        continuation()
+
+
+
