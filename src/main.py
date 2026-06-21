@@ -1,6 +1,7 @@
 import sys
 
 import lex
+import tree
 import obj
 
 
@@ -8,8 +9,9 @@ def main():
     path = sys.argv[1]
 
     stream = lex.tokenize(path)
-    root = obj.AstProg.parse(stream)
-    root.run()
+    root = tree.AstProg.parse(stream)
+    ctx = obj.Ctx()
+    root.run(ctx)
 
 
 

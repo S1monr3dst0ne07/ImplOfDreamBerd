@@ -11,6 +11,7 @@ def get_kind(char):
         case ' ': return 'space'
         case '{': return 'blockopen'
         case '}': return 'blockclose'
+        case '.': return 'dot'
         case '\n': return 'newline'
         case x if x.isdigit(): return 'numb'
         case x if x.isalpha(): return 'iden'
