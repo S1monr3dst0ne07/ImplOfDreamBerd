@@ -37,7 +37,7 @@ class AstScopeAccess:
             stream.expect('.')
             subj, iden = iden, stream.pop()
 
-        if stream.peek().isdigit() or stream.peekt().kind not in (sym.op + sym.un_op):
+        if stream.peek().isdigit() or stream.peekt().content not in (sym.op + sym.un_op):
             # this check is needed to prevent `x + 5` from
             # being parsed as `x(+) 5`
 
@@ -313,9 +313,19 @@ class AstBlock:
         stream.expect('}')
         return cls(stmts)
 
-    def run(self, ctx):
-        for stmt in self.stmts:
-            stmt.run(ctx)
+    def run(self, ctx, offset=1, index=0):
+        res = self.stmts[index].run(ctx)
+        step = index + offset
+
+        if len(self.stmts) == step:
+            return res
+            
+
+        #pass continuation into context scheduler.
+        # this is some fucking haskell level programming right here.
+        return ctx.scheduler(lambda: self.run(ctx, step))
+
+
 
 
 @dc
@@ -392,9 +402,48 @@ class AstAssign:
         dst.kind    = src.kind
 
 @dc
+class AstFuncDef:
+    name : str
+    params : list[str]
+    body : AstBlock | AstExpr
+
+    @classmethod
+    def parse(cls, stream):
+        stream.pop()
+        name = stream.pop()
+
+        params = []
+        while stream.peek() != '=>':
+            params.append(stream.pop())
+            if stream.peek() == ',':
+                stream.expect(',')
+        stream.expect('=>')
+
+        if stream.peek() == '{': #}
+            body = AstBlock.parse(stream)
+        else:
+            body = AstExpr.parse(stream)
+
+        return cls(name, params, body)
+
+
+
+
+
+@dc
 class AstStmt:
     sub : typing.Any
     eos : str
+
+    def _is_func_keyword(word):
+        i = 0
+        for char in 'function':
+            if word[i] == char:
+                i += 1
+
+        return len(word) == i
+            
+
 
     @classmethod
     def parse(cls, stream):
@@ -412,11 +461,14 @@ class AstStmt:
                 sub = AstIf.parse(stream)
                 need_eos = False
 
-            case _, '[':
+            case _, '[': #]
                 sub = AstAssign.parse_index_access(stream)
 
             case _, '=':
                 sub = AstAssign.parse(stream)
+
+            case x, _ if cls._is_func_keyword(x):
+                sub = AstFuncDef.parse(stream)
 
             case x, y if all(i in ('const', 'var') for i in (x, y)):
                 sub = AstDecl.parse(stream)
