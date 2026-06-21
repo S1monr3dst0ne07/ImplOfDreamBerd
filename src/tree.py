@@ -37,10 +37,14 @@ class AstScopeAccess:
             stream.expect('.')
             subj, iden = iden, stream.pop()
 
-        while stream.peekt().kind not in ('eos', 'debug'):
-            params.append(AstExpr.parse(stream))
-            if stream.peek() != ',': break
-            stream.expect(',')
+        if stream.peekt().kind != 'sym':
+            # this check is needed to prevent `x + 5` from
+            # being parsed as `x(+) 5`
+
+            while stream.peekt().kind not in ('eos', 'debug'):
+                params.append(AstExpr.parse(stream))
+                if stream.peek() != ',': break
+                stream.expect(',')
 
         return cls(iden, subj, params)
 
@@ -125,8 +129,10 @@ class AstLeaf:
         if type(self.value) is AstScopeAccess:
             return self.value.run(ctx)
 
-        if self.value.kind == 'numb' and self.value.content in ctx.literal_numb_mapper:
-            return obj.Value(content=ctx.literal_numb_mapper[self.value.content], kind='numb')
+        #renamed literal number
+        numb_name = str(self.value.content)
+        if self.value.kind == 'numb' and numb_name in ctx.scope:
+            return ctx.scope[numb_name]
 
         return self.value
 
@@ -202,6 +208,9 @@ class AstExpr:
             case '-': res = l - r
             case '*': res = l * r
             case '/': res = l / r
+            case '===': res = l == r
+
+            case x: print(f"UNIMPLEMENTED OP: {x}")
 
         return obj.Value(content=res, kind=left.kind)
 

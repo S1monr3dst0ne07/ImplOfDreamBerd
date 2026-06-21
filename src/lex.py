@@ -32,6 +32,7 @@ class Streamer:
     stream : list[Token]
 
     def _check(self):
+        if self.stream == []: return
         if self.stream[0].kind == "space":
             self.stream.pop(0)
 
@@ -50,9 +51,13 @@ class Streamer:
         return self.popt().content
 
     def has(self):
+        self._check()
         return len(self.stream) > 0
 
     def _wrap(self):
+        if not self.has():
+            return
+
         if self.peekt().kind == 'newline':
             self.pop()
 
@@ -60,16 +65,12 @@ class Streamer:
     # discarded by the lexer. Streamer.space skips whitespace
     # in circumstances where it doesn't matter
     def space(self):
-        if not self.has():
-            return 0
-
         self._wrap()
 
-        if self.peekt().kind == "space":
+        if self.has() and self.peekt().kind == "space":
             return len(self.pop())
 
         self._wrap()
-
         return 0
         
 
@@ -96,7 +97,7 @@ def tokenize(path):
 
     stream = []
     buffer = ""
-    line = 0
+    line = 1
 
     state = None
     for char in graphemes:

@@ -42,7 +42,5 @@ class Value:
 class Ctx:
     scope : dict[str, Value] = field(default_factory=lambda: {})
 
-    # used for renaming numbers
-    literal_numb_mapper : dict[int, int] = field(default_factory=lambda: {})
 
 
