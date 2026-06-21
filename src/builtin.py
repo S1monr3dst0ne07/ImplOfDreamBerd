@@ -3,7 +3,7 @@ import obj
 
 class Builtin:
     def print(value):
-        print(value.content)
+        print(value.render())
         return "<print>"
 
     def _null():
@@ -16,14 +16,12 @@ class Builtin:
 
     def pop(value):
         value._edit()
-        
-        res = Builtin._null()
-        match value.kind:
-            case 'string':
-                res, *tail = value.content
-                value.content = "".join(tail)
+        return value.content.pop(0)
 
-        return res
+    def push(value, new):
+        value._edit()
+        value.content.append(new)
+        return Builtin._null()
 
 
 def get_all():

@@ -46,7 +46,13 @@ class AstLeaf:
 
             case 'quote': 
                 value = obj.Value(
-                    cls._parse_string(stream),
+                    content = [obj.Value(
+                        content = x,
+                        kind = 'char',
+                        editable = True,
+                        assignable = True,
+                    ) for x in 
+                    cls._parse_string(stream)],
                     kind = 'string',
                 )
             case 'iden': 
@@ -316,7 +322,7 @@ class AstStmt:
         res = self.sub.run(ctx)
         
         match self.eos:
-            case "?": print(f"[DEBUG] {res}")
+            case "?": print(f"[DEBUG] {res.render()}")
 
 @dc
 class AstProg:
