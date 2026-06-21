@@ -64,6 +64,9 @@ class AstScopeAccess:
             # calls as function if type if iden in scope is metafunc
             return value.content(*params)
 
+        if value.kind == 'func':
+            return value.content.call(ctx, params)
+
         #otherwise it has to have been a variable access
         return value
 
@@ -426,6 +429,22 @@ class AstFuncDef:
         return cls(name, params, body)
 
 
+    def run(self, ctx):
+        ctx.scope[self.name] = obj.Value(self, kind='func')
+
+    def call(self, ctx, params):
+        ctx.push_scope()
+
+        for k,v in zip(self.params, params):
+            ctx.scope[k] = v
+
+        res = self.body.run(ctx)
+
+        ctx.pop_scope()
+        return res
+
+
+
 
 
 
@@ -473,7 +492,7 @@ class AstStmt:
                 sub = AstDecl.parse(stream)
 
             case x: 
-                sub = AstScopeAccess.parse(stream)
+                sub = AstExpr.parse(stream)
 
 
         eos = None
@@ -491,6 +510,8 @@ class AstStmt:
         
         match self.eos:
             case "?": print(f"[DEBUG] {res.render()}")
+
+        return res
 
 @dc
 class AstProg:

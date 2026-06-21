@@ -51,7 +51,13 @@ class Value:
 @dc
 class Ctx:
     scope : dict[str, Value] = field(default_factory=lambda: {})
+    stack : list[dict[str, Value]] = field(default_factory=lambda: [])
 
+    def push_scope(self):
+        self.stack.append(self.scope.copy())
+
+    def pop_scope(self):
+        self.scope = self.stack.pop()
 
 
     def scheduler(self, continuation):
