@@ -100,14 +100,20 @@ def tokenize(path):
     line = 1
 
     state = None
+    comment = False
     for char in graphemes:
         kind = get_kind(char)
 
+        if buffer == '//': comment = True
 
-        if kind != state and state:
+        if kind != state and state and not comment:
             stream.append(Token(
                 buffer, state, line
             ))
+            buffer = ""
+
+        if char == '\n': 
+            comment = False
             buffer = ""
 
         state = kind
