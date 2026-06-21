@@ -106,15 +106,17 @@ class AstIndexAccess:
 
         return cls(name, index)
 
-    def run(self, ctx):
+    def run(self, ctx, lvalue=False):
         value = ctx.scope[self.name]
         index = self.index.run(ctx).content
 
         match value.kind:
             case 'array':
-                return value.content[index + 1]
+                index += 1
+                if lvalue and index not in value.content:
+                    value.content[index] = obj.Value(None, 'null')
+                return value.content[index]
         
-
 
 
 
@@ -255,7 +257,7 @@ class AstExpr:
         right = self.right.run(ctx)
 
         if right.kind != left.kind:
-            error.error("Cannot operator with `{self.op}` on `{left}` and `{right}` because their types do not match.")
+            error.error(f"Cannot operator with `{self.op}` on `{left.render()}` and `{right.render()}` because their types do not match.")
 
         l = left.content
         r = right.content
@@ -368,8 +370,21 @@ class AstAssign:
 
         return cls(dst, src)
 
+    @classmethod
+    def parse_index_access(cls, stream):
+        dst = AstIndexAccess.parse(stream)
+
+        # for `array[index]?`
+        if stream.peek() != '=':
+            return dst
+
+        stream.expect('=')
+        src = AstExpr.parse(stream)
+
+        return cls(dst, src)
+
     def run(self, ctx):
-        dst = self.dst.run(ctx)
+        dst = self.dst.run(ctx, lvalue=True)
         src = self.src.run(ctx)
         dst._assign()
 
@@ -396,6 +411,9 @@ class AstStmt:
             case 'if', _: 
                 sub = AstIf.parse(stream)
                 need_eos = False
+
+            case _, '[':
+                sub = AstAssign.parse_index_access(stream)
 
             case _, '=':
                 sub = AstAssign.parse(stream)
