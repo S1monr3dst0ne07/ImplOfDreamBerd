@@ -55,7 +55,7 @@ class AstLeaf:
                     cls._parse_string(stream)],
                     kind = 'string',
                 )
-            case 'iden': 
+            case 'iden' | 'sym': 
                 value = obj.Value(
                     stream.pop(),
                     kind = 'metaiden',
@@ -130,16 +130,21 @@ class AstExpr:
         )
 
     def eval(self, ctx):
-        left  = self.left.eval(ctx).content
-        right = self.right.eval(ctx).content
+        left  = self.left.eval(ctx)
+        right = self.right.eval(ctx)
 
+        if right.kind != left.kind:
+            error.error("Cannot operator with `{self.op}` on `{left}` and `{right}` because their types do not match.")
+
+        l = left.content
+        r = right.content
         match self.op:
-            case '+': res = left + right
-            case '-': res = left - right
-            case '*': res = left * right
-            case '/': res = left / right
+            case '+': res = l + r
+            case '-': res = l - r
+            case '*': res = l * r
+            case '/': res = l / r
 
-        return obj.Value(content=res, kind='int')
+        return obj.Value(content=res, kind=left.kind)
 
 
 

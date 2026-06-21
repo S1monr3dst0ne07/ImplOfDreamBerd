@@ -1,6 +1,8 @@
 
 from dataclasses import dataclass as dc
 
+import regex
+
 
 def get_kind(char):
     match char:
@@ -81,17 +83,20 @@ class Streamer:
 
 
 def tokenize(path):
-    with open(path, 'r') as f:
+    with open(path, 'r', encoding='utf-8') as f:
         src = f.read()
 
     "They get replaced with whitespace."
     src = src.replace('(', ' ').replace(')', ' ')
 
+    #cluster unicode graphemes
+    graphemes = regex.findall(r"\X", src)
+
     stream = []
     buffer = ""
 
     state = None
-    for char in src:
+    for char in graphemes:
         kind = get_kind(char)
 
         if kind != state and state:

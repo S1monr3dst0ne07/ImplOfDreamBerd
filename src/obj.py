@@ -31,6 +31,8 @@ class Value:
                 return self.content
             case 'null':
                 return "NULL"
+            case 'numb':
+                return str(self.content)
 
             case x:
                 error.error(f"Unable to render type: `{x}`")
