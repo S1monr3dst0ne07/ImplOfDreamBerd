@@ -92,6 +92,30 @@ class AstLitArray:
             kind = 'array',
         )
 
+@dc
+class AstIndexAccess:
+    name : str
+    index : "AstExpr"
+
+    @classmethod
+    def parse(cls, stream):
+        name = stream.pop()
+        stream.expect('[') #]
+        index = AstExpr.parse(stream)
+        stream.expect(']')
+
+        return cls(name, index)
+
+    def run(self, ctx):
+        value = ctx.scope[self.name]
+        index = self.index.run(ctx).content
+
+        match value.kind:
+            case 'array':
+                return value.content[index + 1]
+        
+
+
 
 
 @dc
@@ -146,7 +170,10 @@ class AstLeaf:
                 value = AstLitArray.parse(stream)
 
             case 'iden' | 'sym': 
-                value = AstScopeAccess.parse(stream)
+                if stream.lookhead(2)[1].kind == 'arrayopen':
+                    value = AstIndexAccess.parse(stream)
+                else:
+                    value = AstScopeAccess.parse(stream)
 
             case x: error.error(f"Unknown leaf kind: {stream.popt()}")
 
@@ -154,7 +181,7 @@ class AstLeaf:
         return cls(value)
 
     def run(self, ctx):
-        if type(self.value) in (AstScopeAccess, AstLitArray):
+        if type(self.value) in (AstScopeAccess, AstLitArray, AstIndexAccess):
             return self.value.run(ctx)
 
         #renamed literal number
