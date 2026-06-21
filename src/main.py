@@ -9,8 +9,7 @@ def main():
 
     stream = lex.tokenize(path)
     root = obj.AstProg.parse(stream)
-    print(root)
-    #root.run()
+    root.run()
 
 
 

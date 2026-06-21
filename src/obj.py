@@ -63,6 +63,11 @@ class AstUn:
         sub = AstLeaf.parse(stream)
         return cls(op, sub)
 
+    def eval(self):
+        sub = self.sub.eval()
+        match self.op:
+            case ';': return not sub 
+
 
 @dc
 class AstExpr:
@@ -148,6 +153,10 @@ class AstIf:
         body = AstStmt.parse(stream)
         return cls(cond, body)
 
+    def run(self):
+        if self.cond.eval():
+            self.body.run()
+
 
 @dc
 class AstBlock:
@@ -167,6 +176,10 @@ class AstBlock:
 
         stream.pop()
         return cls(stmts)
+
+    def run(self):
+        for stmt in self.stmts:
+            stmt.run()
 
 
 @dc
