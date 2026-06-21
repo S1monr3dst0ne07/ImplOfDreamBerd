@@ -26,10 +26,9 @@ class Token:
 @dc
 class Streamer:
     stream : list[Token]
-    ignore_space : bool = True
 
     def _check(self):
-        if self.ignore_space and self.stream[0].kind == "space":
+        if self.stream[0].kind == "space":
             self.stream.pop(0)
 
     def peekt(self):

@@ -5,6 +5,7 @@ from dataclasses import dataclass as dc
 import error
 import sym
 import obj
+import builtin
 
 
 @dc
@@ -62,7 +63,10 @@ class AstLeaf:
         if self.value.kind == 'metaiden':
             match self.value.content:
                 case x if x in ctx.scope:
-                    return ctx.scope[x].value
+                    return ctx.scope[x]
+
+                case x:
+                    error.error(f"Meta identifier `{x}` does not exist in scope.")
 
         return self.value
 
@@ -100,9 +104,7 @@ class AstExpr:
     right : "AstExpr | AstUn | AstLeaf"
 
     @classmethod
-    def parse(cls, stream, level=0):
-        #space is significant inside of expressions
-        if level == 0: stream.ignore_space = False
+    def parse(cls, stream):
 
         left = AstUn.parse(stream)
         left_space = stream.space()
@@ -112,10 +114,7 @@ class AstExpr:
 
         op = stream.pop()
         right_space = stream.space()
-        right = AstExpr.parse(stream, level=level+1)
-
-        #outside of them it mostly isn't
-        if level == 0: stream.ignore_space = True
+        right = AstExpr.parse(stream)
 
         return cls(
             max(left_space, right_space),
@@ -141,29 +140,35 @@ class AstExpr:
 
 @dc
 class AstCall:
-    name : str
+    func : typing.Any
     params : list[typing.Any]
 
     @classmethod
     def parse(cls, stream):
-        name = stream.pop()
+        func = AstExpr.parse(stream)
         params = []
+
+        # syntax sugar for `subj.verb(obj...)` => `verb(subj, obj...)`
+        if stream.peek() == '.':
+            stream.expect('.')
+            params.append(func)
+            func = AstExpr.parse(stream)
 
         while stream.peekt().kind not in ('eos', 'debug'):
             params.append(AstExpr.parse(stream))
             if stream.peek() != ',': break
             stream.expect(',')
 
-        return cls(name, params)
+        return cls(func, params)
 
     def run(self, ctx):
+        #the subject is not evaluated
         params = [x.eval(ctx) for x in self.params]
+        func = self.func.eval(ctx)
+        if func.kind != 'metafunc':
+            error.error("Attempting to call non-function expression.")
 
-        funcs = {
-            'print': lambda x: (print(x.content), "<print function>")[1],
-        }
-
-        return funcs[self.name](*params)
+        return func.content(*params)
 
 
 @dc
@@ -235,11 +240,12 @@ class AstDecl:
         if self.name in ctx.scope:
             error.error(f"Variable `{self.name}` already declared.")
 
-        ctx.scope[self.name] = obj.Variable(
-            value = self.expr.eval(ctx),
-            editable = self.editable,
-            assignable = self.assignable,
-        )
+        init = self.expr.eval(ctx)
+
+        init.editable = self.editable,
+        init.assignable = self.assignable,
+
+        ctx.scope[self.name] = init
 
 
 
@@ -302,6 +308,7 @@ class AstProg:
         return cls(content)
 
     def run(self, ctx):
+        builtin.inject(ctx)
 
         for stmt in self.content:
             stmt.run(ctx)
