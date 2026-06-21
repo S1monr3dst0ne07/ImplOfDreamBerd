@@ -37,7 +37,7 @@ class AstScopeAccess:
             stream.expect('.')
             subj, iden = iden, stream.pop()
 
-        if stream.peekt().kind != 'sym':
+        if stream.peek().isdigit() or stream.peekt().kind not in (sym.op + sym.un_op):
             # this check is needed to prevent `x + 5` from
             # being parsed as `x(+) 5`
 
@@ -186,6 +186,7 @@ class AstUn:
 
         match self.op:
             case ';': res = not value
+            case '-': res = -value
 
         return obj.Value(content=res, kind=sub.kind)
 
@@ -377,8 +378,6 @@ class AstStmt:
 
             case x: 
                 sub = AstScopeAccess.parse(stream)
-
-
 
 
         eos = None
