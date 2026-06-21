@@ -7,15 +7,17 @@ import typing
 @dc
 class Value:
     content : typing.Any
-    editable   : bool
-    assingable : bool
+    kind : str
 
-
-
+@dc
+class Variable:
+    value : Value
+    editable   : bool = False
+    assignable : bool = False
 
 @dc
 class Ctx:
-    scope : dict[str, Value] = field(default_factory=lambda: {})
+    scope : dict[str, Variable] = field(default_factory=lambda: {})
 
 
 

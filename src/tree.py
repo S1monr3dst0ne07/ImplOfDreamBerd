@@ -4,11 +4,12 @@ from dataclasses import dataclass as dc
 
 import error
 import sym
+import obj
 
 
 @dc
 class AstLeaf:
-    value : typing.Any
+    value : obj.Value
 
     @staticmethod
     def _compute_quote_size(token):
@@ -40,15 +41,29 @@ class AstLeaf:
                 if stream.peekt().kind == 'dot':
                     stream.pop()
                 leaf += float(f"0.{stream.pop()}")
-            case 'quote': leaf = cls._parse_string(stream)
-            case 'iden':
-                match stream.pop():
-                    case 'false': leaf = False
-            case x: error.error(f"Unknown leaf kind: {stream.popt()}")
-        stream.space()
-        return cls(leaf)
+                value = obj.Value(leaf, kind='numb')
 
-    def eval(self):
+            case 'quote': 
+                value = obj.Value(
+                    cls._parse_string(stream),
+                    kind = 'string',
+                )
+            case 'iden': 
+                value = obj.Value(
+                    stream.pop(),
+                    kind = 'metaiden',
+                )
+            case x: error.error(f"Unknown leaf kind: {stream.popt()}")
+
+        stream.space()
+        return cls(value)
+
+    def eval(self, ctx):
+        if self.value.kind == 'metaiden':
+            match self.value.content:
+                case x if x in ctx.scope:
+                    return ctx.scope[x].value
+
         return self.value
 
 
@@ -67,8 +82,8 @@ class AstUn:
         sub = AstLeaf.parse(stream)
         return cls(op, sub)
 
-    def eval(self):
-        sub = self.sub.eval()
+    def eval(self, ctx):
+        sub = self.sub.eval(ctx)
         match self.op:
             case ';': return not sub 
 
@@ -101,9 +116,9 @@ class AstExpr:
             op = op
         )
 
-    def eval(self):
-        left  = self.left.eval()
-        right = self.left.eval()
+    def eval(self, ctx):
+        left  = self.left.eval(ctx).content
+        right = self.left.eval(ctx).content
 
         match self.op:
             case '+': res = left + right
@@ -111,7 +126,7 @@ class AstExpr:
             case '*': res = left * right
             case '/': res = left / right
 
-        return res
+        return obj.Value(content=res, kind='int')
 
 
 
@@ -137,7 +152,7 @@ class AstCall:
         params = [x.eval(ctx) for x in self.params]
 
         funcs = {
-            'print': lambda x: (print(x), "<print function>")[1],
+            'print': lambda x: (print(x.content), "<print function>")[1],
         }
 
         return funcs[self.name](*params)
@@ -215,6 +230,14 @@ class AstDecl:
 
         return cls(editable, assignable, name, expr)
 
+    def run(self, ctx):
+        ctx.scope[self.name] = obj.Variable(
+            value = self.expr.eval(ctx),
+            editable = self.editable,
+            assignable = self.assignable,
+        )
+
+
 
 
 @dc
@@ -275,6 +298,7 @@ class AstProg:
         return cls(content)
 
     def run(self, ctx):
+
         for stmt in self.content:
             stmt.run(ctx)
 
