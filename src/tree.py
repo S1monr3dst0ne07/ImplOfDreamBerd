@@ -40,7 +40,7 @@ class AstLeaf:
                 leaf = int(stream.pop())
                 if stream.peekt().kind == 'dot':
                     stream.pop()
-                leaf += float(f"0.{stream.pop()}")
+                    leaf += float(f"0.{stream.pop()}")
                 value = obj.Value(leaf, kind='numb')
 
             case 'quote': 
@@ -88,6 +88,7 @@ class AstUn:
             case ';': return not sub 
 
 
+
 @dc
 class AstExpr:
     space : int 
@@ -99,7 +100,10 @@ class AstExpr:
     right : "AstExpr | AstUn | AstLeaf"
 
     @classmethod
-    def parse(cls, stream):
+    def parse(cls, stream, level=0):
+        #space is significant inside of expressions
+        if level == 0: stream.ignore_space = False
+
         left = AstUn.parse(stream)
         left_space = stream.space()
 
@@ -108,7 +112,11 @@ class AstExpr:
 
         op = stream.pop()
         right_space = stream.space()
-        right = AstUn.parse(stream)
+        right = AstExpr.parse(stream, level=level+1)
+
+        #outside of them it mostly isn't
+        if level == 0: stream.ignore_space = True
+
         return cls(
             max(left_space, right_space),
             left = left,
@@ -118,7 +126,7 @@ class AstExpr:
 
     def eval(self, ctx):
         left  = self.left.eval(ctx).content
-        right = self.left.eval(ctx).content
+        right = self.right.eval(ctx).content
 
         match self.op:
             case '+': res = left + right
@@ -144,7 +152,7 @@ class AstCall:
         while stream.peekt().kind not in ('eos', 'debug'):
             params.append(AstExpr.parse(stream))
             if stream.peek() != ',': break
-            stream.pop()
+            stream.expect(',')
 
         return cls(name, params)
 
@@ -165,10 +173,8 @@ class AstIf:
 
     @classmethod
     def parse(cls, stream):
-        stream.pop()
-        stream.space()
+        stream.expect('if')
         cond = AstExpr.parse(stream)
-        stream.space()
         body = AstStmt.parse(stream)
         return cls(cond, body)
 
@@ -185,7 +191,7 @@ class AstBlock:
 
     @classmethod
     def parse(cls, stream):
-        stream.pop()
+        stream.expect('{')
 
         stmts = []
         while True:
@@ -193,7 +199,7 @@ class AstBlock:
             if sub == cls.BlockClose: break
             stmts.append(sub)
 
-        stream.pop()
+        stream.expect('}')
         return cls(stmts)
 
     def run(self, ctx):
@@ -211,26 +217,24 @@ class AstDecl:
     @classmethod
     def parse(cls, stream):
         editable = {'const' : False, 'var' : True}[stream.pop()]
-        stream.space()
         if stream.peek() not in ('const', 'var'):
             error.token(stream.pop(), "`const` / `var` not followed by `const` / `var`.")
 
         assignable = {'const' : False, 'var' : True}[stream.pop()]
-        stream.space()
-
         name = stream.pop()
-        stream.space()
 
         if stream.peek() != '=':
             error.token(stream.pop(), "Expected `=`.")
         stream.pop()
 
         expr = AstExpr.parse(stream)
-        stream.space()
 
         return cls(editable, assignable, name, expr)
 
     def run(self, ctx):
+        if self.name in ctx.scope:
+            error.error(f"Variable `{self.name}` already declared.")
+
         ctx.scope[self.name] = obj.Variable(
             value = self.expr.eval(ctx),
             editable = self.editable,
