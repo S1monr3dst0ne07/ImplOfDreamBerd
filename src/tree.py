@@ -122,7 +122,7 @@ class AstLeaf:
         return cls(value)
 
     def eval(self, ctx):
-        if type(self.value is AstScopeAccess):
+        if type(self.value) is AstScopeAccess:
             return self.value.run(ctx)
 
         return self.value
