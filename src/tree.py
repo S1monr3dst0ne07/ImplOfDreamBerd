@@ -8,6 +8,64 @@ import obj
 import builtin
 
 
+
+
+# function calls and Variable accesses cannot be differentiated at parse-time.
+# hence they both are unified under the AstScopeAccess node type.
+# `iden` and `subj` cannot be expression here because it makes it impossible to parse.
+# you can't know, for example, how to parse the following if you assume function references can be expression:
+# ` 1 + a 1, 2, 3`
+# is it `(1 + a)(1, 2, 3)` or `1 + a(1, 2, 3)`?
+# hence this implement assumes function references cannot be expressions.
+# it would parse the upper expression as such:
+# `1 + a(1, 2, 3)`
+
+@dc
+class AstScopeAccess:
+    iden : str #variable / function name
+    subj : str | None # optional subject prefix
+    params : list[typing.Any]
+
+    @classmethod
+    def parse(cls, stream):
+        iden = stream.pop()
+        params = []
+
+        # syntax sugar for `subj.verb(obj...)` => `verb(subj, obj...)`
+        subj = None
+        if stream.peek() == '.':
+            stream.expect('.')
+            subj, iden = iden, stream.pop()
+
+        while stream.peekt().kind not in ('eos', 'debug'):
+            params.append(AstExpr.parse(stream))
+            if stream.peek() != ',': break
+            stream.expect(',')
+
+        return cls(iden, subj, params)
+
+    def _var_lookup(self, ctx, iden):
+        if iden not in ctx.scope:
+            error.error(f"Identifier `{iden}` does not exist in scope.")
+        return ctx.scope[iden]
+
+    def run(self, ctx):
+        params = (
+            [self._var_lookup(ctx, self.subj)] if self.subj else [] + 
+            [x.eval(ctx) for x in self.params]
+        )
+        value = self._var_lookup(ctx, self.iden)
+
+        if value.kind == 'metafunc':
+            # calls as function if type if iden in scope is metafunc
+            return value.content(*params)
+
+        #otherwise it has to have been a variable access
+        return value
+
+
+
+
 @dc
 class AstLeaf:
     value : obj.Value
@@ -56,23 +114,16 @@ class AstLeaf:
                     kind = 'string',
                 )
             case 'iden' | 'sym': 
-                value = obj.Value(
-                    stream.pop(),
-                    kind = 'metaiden',
-                )
+                value = AstScopeAccess.parse(stream)
+
             case x: error.error(f"Unknown leaf kind: {stream.popt()}")
 
         stream.space()
         return cls(value)
 
     def eval(self, ctx):
-        if self.value.kind == 'metaiden':
-            match self.value.content:
-                case x if x in ctx.scope:
-                    return ctx.scope[x]
-
-                case x:
-                    error.error(f"Meta identifier `{x}` does not exist in scope.")
+        if type(self.value is AstScopeAccess):
+            return self.value.run(ctx)
 
         return self.value
 
@@ -94,8 +145,12 @@ class AstUn:
 
     def eval(self, ctx):
         sub = self.sub.eval(ctx)
+        value = sub.content
+
         match self.op:
-            case ';': return not sub 
+            case ';': res = not value
+
+        return obj.Value(content=res, kind=sub.kind)
 
 
 
@@ -110,7 +165,8 @@ class AstExpr:
     right : "AstExpr | AstUn | AstLeaf"
 
     @classmethod
-    def parse(cls, stream):
+    def parse(cls, stream, no_func_calls=False):
+        #! TODO: implement no_func_calls 
 
         left = AstUn.parse(stream)
         left_space = stream.space()
@@ -149,37 +205,6 @@ class AstExpr:
 
 
 
-@dc
-class AstCall:
-    func : typing.Any
-    params : list[typing.Any]
-
-    @classmethod
-    def parse(cls, stream):
-        func = AstExpr.parse(stream)
-        params = []
-
-        # syntax sugar for `subj.verb(obj...)` => `verb(subj, obj...)`
-        if stream.peek() == '.':
-            stream.expect('.')
-            params.append(func)
-            func = AstExpr.parse(stream)
-
-        while stream.peekt().kind not in ('eos', 'debug'):
-            params.append(AstExpr.parse(stream))
-            if stream.peek() != ',': break
-            stream.expect(',')
-
-        return cls(func, params)
-
-    def run(self, ctx):
-        #the subject is not evaluated
-        params = [x.eval(ctx) for x in self.params]
-        func = self.func.eval(ctx)
-        if func.kind != 'metafunc':
-            error.error("Attempting to call non-function expression.")
-
-        return func.content(*params)
 
 
 @dc
@@ -266,7 +291,10 @@ class AstAssign:
 
     @classmethod
     def parse(cls, stream):
-        dst = AstExpr.parse(stream)
+        dst = AstExpr.parse(
+            stream, 
+            no_func_calls=True #makes it possible to parse signals
+        )
         stream.expect('=')
         src = AstExpr.parse(stream)
 
@@ -308,7 +336,7 @@ class AstStmt:
                 sub = AstDecl.parse(stream)
 
             case x: 
-                sub = AstCall.parse(stream)
+                sub = AstScopeAccess.parse(stream)
 
 
 

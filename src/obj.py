@@ -11,8 +11,8 @@ class Value:
     content : typing.Any
     kind : str
 
-    editable   : bool = False
-    assignable : bool = False
+    editable   : bool = True
+    assignable : bool = True
 
     def _edit(self):
         if not self.editable:
@@ -31,7 +31,7 @@ class Value:
                 return self.content
             case 'null':
                 return "NULL"
-            case 'numb':
+            case 'numb' | 'bool':
                 return str(self.content)
 
             case x:

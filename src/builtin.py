@@ -23,6 +23,11 @@ class Builtin:
         value.content.append(new)
         return Builtin._null()
 
+    def true():
+        return obj.Value(content=True, kind='bool')
+    def false():
+        return obj.Value(content=False, kind='bool')
+
 
 def get_all():
     builtins = {}
@@ -44,4 +49,8 @@ def inject(ctx):
             editable = False,
             assignable = False,
         )
+
+
+    ctx.scope['True'] = ctx.scope['true']
+    ctx.scope['False'] = ctx.scope['false']
 
