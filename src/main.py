@@ -9,6 +9,7 @@ def main():
     path = sys.argv[1]
 
     stream = lex.tokenize(path)
+    print(stream)
     root = tree.AstProg.parse(stream)
     ctx = obj.Ctx()
     root.run(ctx)

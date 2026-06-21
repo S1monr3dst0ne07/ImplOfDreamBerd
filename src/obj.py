@@ -34,6 +34,16 @@ class Value:
                 return "NULL"
             case 'numb' | 'bool':
                 return str(self.content)
+            case 'array':
+                indices = sorted(self.content.keys())
+                seg = []
+
+                for x in indices:
+                    seg.append(self.content[x].render())
+                    seg.append(', ')
+
+                seg.pop()
+                return f"[{''.join(seg)}]"
 
             case x:
                 error.error(f"Unable to render type: `{x}`")

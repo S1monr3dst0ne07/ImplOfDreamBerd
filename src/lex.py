@@ -6,6 +6,7 @@ import regex
 
 def get_kind(char):
     match char:
+        case '\0': return 'meta flush'
         case '"': return 'quote'
         case "'": return 'quote'
         case '!': return 'eos'
@@ -13,6 +14,8 @@ def get_kind(char):
         case ' ': return 'space'
         case '{': return 'blockopen'
         case '}': return 'blockclose'
+        case '[': return 'arrayopen'
+        case ']': return 'arrayclose'
         case '.': return 'dot'
         case '\n': return 'newline'
         case x if x.isdigit(): return 'numb'
@@ -54,23 +57,13 @@ class Streamer:
         self._check()
         return len(self.stream) > 0
 
-    def _wrap(self):
-        if not self.has():
-            return
-
-        if self.peekt().kind == 'newline':
-            self.pop()
-
     #DB has significant whitespace which means it cannot be
     # discarded by the lexer. Streamer.space skips whitespace
     # in circumstances where it doesn't matter
     def space(self):
-        self._wrap()
-
         if self.has() and self.peekt().kind == "space":
             return len(self.pop())
 
-        self._wrap()
         return 0
         
 
@@ -101,15 +94,16 @@ def tokenize(path):
 
     state = None
     comment = False
-    for char in graphemes:
+    for char in graphemes + ['\0']:
         kind = get_kind(char)
 
         if buffer == '//': comment = True
 
         if kind != state and state and not comment:
-            stream.append(Token(
-                buffer, state, line
-            ))
+            if state != 'newline':
+                stream.append(Token(
+                    buffer, state, line
+                ))
             buffer = ""
 
         if char == '\n': 

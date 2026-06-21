@@ -56,7 +56,7 @@ class AstScopeAccess:
     def run(self, ctx):
         params = (
             [self._var_lookup(ctx, self.subj)] if self.subj else [] + 
-            [x.eval(ctx) for x in self.params]
+            [x.run(ctx) for x in self.params]
         )
         value = self._var_lookup(ctx, self.iden)
 
@@ -67,6 +67,30 @@ class AstScopeAccess:
         #otherwise it has to have been a variable access
         return value
 
+
+
+@dc
+class AstLitArray:
+    elems : list["AstExpr"]
+
+    @classmethod
+    def parse(cls, stream):
+        stream.expect('[') #]
+        elems = []
+
+        while stream.peek() != ']':
+            elems.append(AstExpr.parse(stream))
+            if stream.peek() == ',':
+                stream.expect(',')
+        stream.expect(']')
+
+        return cls(elems)
+
+    def run(self, ctx):
+        return obj.Value(
+            content = { i : x.run(ctx) for i, x in enumerate(self.elems) },
+            kind = 'array',
+        )
 
 
 
@@ -117,6 +141,10 @@ class AstLeaf:
                     cls._parse_string(stream)],
                     kind = 'string',
                 )
+                
+            case 'arrayopen':
+                value = AstLitArray.parse(stream)
+
             case 'iden' | 'sym': 
                 value = AstScopeAccess.parse(stream)
 
@@ -125,8 +153,8 @@ class AstLeaf:
         stream.space()
         return cls(value)
 
-    def eval(self, ctx):
-        if type(self.value) is AstScopeAccess:
+    def run(self, ctx):
+        if type(self.value) in (AstScopeAccess, AstLitArray):
             return self.value.run(ctx)
 
         #renamed literal number
@@ -152,8 +180,8 @@ class AstUn:
         sub = AstLeaf.parse(stream)
         return cls(op, sub)
 
-    def eval(self, ctx):
-        sub = self.sub.eval(ctx)
+    def run(self, ctx):
+        sub = self.sub.run(ctx)
         value = sub.content
 
         match self.op:
@@ -194,9 +222,9 @@ class AstExpr:
             op = op
         )
 
-    def eval(self, ctx):
-        left  = self.left.eval(ctx)
-        right = self.right.eval(ctx)
+    def run(self, ctx):
+        left  = self.left.run(ctx)
+        right = self.right.run(ctx)
 
         if right.kind != left.kind:
             error.error("Cannot operator with `{self.op}` on `{left}` and `{right}` because their types do not match.")
@@ -232,7 +260,7 @@ class AstIf:
         return cls(cond, body)
 
     def run(self, ctx):
-        if self.cond.eval():
+        if self.cond.run():
             self.body.run(ctx)
 
 
@@ -288,7 +316,7 @@ class AstDecl:
         if self.name in ctx.scope:
             error.error(f"Variable `{self.name}` already declared.")
 
-        init = self.expr.eval(ctx)
+        init = self.expr.run(ctx)
 
         init.editable = self.editable
         init.assignable = self.assignable
@@ -313,8 +341,8 @@ class AstAssign:
         return cls(dst, src)
 
     def run(self, ctx):
-        dst = self.dst.eval(ctx)
-        src = self.src.eval(ctx)
+        dst = self.dst.run(ctx)
+        src = self.src.run(ctx)
         dst._assign()
 
         dst.content = src.content
