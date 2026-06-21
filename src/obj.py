@@ -37,6 +37,9 @@ class AstLeaf:
         match stream.peekt().kind:
             case 'numb':  leaf = int(stream.pop())
             case 'quote': leaf = cls._parse_string(stream)
+            case 'iden':
+                match stream.pop():
+                    case 'false': leaf = False
             case x: error.error(f"Unknown leaf kind: {stream.popt()}")
         stream.space()
         return cls(leaf)
@@ -45,6 +48,7 @@ class AstLeaf:
         return self.value
 
 
+@dc
 class AstUn:
     op : str
     sub : AstLeaf
@@ -56,7 +60,7 @@ class AstUn:
 
         op = stream.pop()
         stream.space() #the spec makes no mention of unary operator separation 
-        sub = Astream.parse(stream)
+        sub = AstLeaf.parse(stream)
         return cls(op, sub)
 
 
@@ -131,20 +135,71 @@ class AstCall:
 
 
 @dc
+class AstIf:
+    cond : AstExpr
+    body : "AstStmt"
+
+    @classmethod
+    def parse(cls, stream):
+        stream.pop()
+        stream.space()
+        cond = AstExpr.parse(stream)
+        stream.space()
+        body = AstStmt.parse(stream)
+        return cls(cond, body)
+
+
+@dc
+class AstBlock:
+    stmts : list["AstStmt"]
+
+    class BlockClose: pass
+
+    @classmethod
+    def parse(cls, stream):
+        stream.pop()
+
+        stmts = []
+        while True:
+            sub = AstStmt.parse(stream)
+            if sub == cls.BlockClose: break
+            stmts.append(sub)
+
+        stream.pop()
+        return cls(stmts)
+
+
+@dc
 class AstStmt:
     sub : typing.Any
     eos : str
 
     @classmethod
     def parse(cls, stream):
-        match stream.peek():
+        #TODO: indent detection
+        stream.space()
+
+        need_eos = True
+        tmp = stream.peek()
+        match tmp:
+            case '}': return AstBlock.BlockClose
+            case '{': 
+                sub = AstBlock.parse(stream)
+                need_eos = False
+            case 'if': 
+                sub = AstIf.parse(stream)
+                need_eos = False
             case x: sub = AstCall.parse(stream)
 
-        token = stream.popt()
-        if token.kind not in ('eos', 'debug'):
-            error.token(token, "End of line is not `!` or `?`.")
+        eos = None
+        if need_eos:
+            token = stream.popt()
+            eos = token.content
+            if token.kind not in ('eos', 'debug'):
+                error.token(token, "End of line is not `!` or `?`.")
 
-        return cls(sub, token.content)
+        stream.space()
+        return cls(sub, eos)
 
     def run(self):
         res = self.sub.run()
@@ -161,7 +216,6 @@ class AstProg:
     def parse(cls, stream):
         content = []
         while stream.has():
-            stream.space()
             content.append(AstStmt.parse(stream))
 
         return cls(content)

@@ -9,7 +9,11 @@ def get_kind(char):
         case '!': return 'eos'
         case '?': return 'debug'
         case ' ': return 'space'
+        case '{': return 'blockopen'
+        case '}': return 'blockclose'
+        case '\n': return 'newline'
         case x if x.isdigit(): return 'numb'
+        case x if x.isalpha(): return 'iden'
         case _: return 'sym'
 
 
@@ -41,8 +45,15 @@ class Streamer:
     # discarded by the lexer. Streamer.space skips whitespace
     # in circumstances where it doesn't matter
     def space(self):
-        if self.peekt().kind == "space":
-            return len(self.pop())
+        if self.has():
+            if self.peekt().kind == 'newline':
+                self.pop()
+
+            if self.peekt().kind == "space":
+                return len(self.pop())
+
+            if self.peekt().kind == 'newline':
+                self.pop()
         return 0
         
 
