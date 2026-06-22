@@ -16,13 +16,18 @@ class Value:
     editable   : bool = True
     assignable : bool = True
 
-    def _edit(self):
+    def _edit(self, ctx):
         if not self.editable:
             error.error(f'Attempting to edit uneditable value: `{self.render()}`')
+        self._mut(ctx)
 
-    def _assign(self):
+    def _assign(self, ctx):
         if not self.assignable:
             error.error(f'Attempting to assign unassignable value: `{self.render()}`')
+        self._mut(ctx)
+
+    def _mut(self, ctx):
+        ctx.mutate(self)
 
     def render(self):
             
@@ -52,7 +57,7 @@ class Value:
 @dc
 class Scope:
     locals : dict[str, Value] = field(default_factory=lambda: {})
-    when   : list["tree.AstWhen"] = field(default_factory=lambda: [])
+    when   : dict[str, list["tree.AstWhen"]] = field(default_factory=lambda: {})
 
     def __getitem__(self, index):
         return self.locals[index]
@@ -68,7 +73,13 @@ class Ctx:
     scope : Scope = field(default_factory=lambda: Scope())
     stack : list = field(default_factory=lambda: [])
 
-    when_level : int = 0
+    def mutate(self, value):
+        #lookup name of object in scope
+        name = next(k for k,v in self.scope.locals.items() if v == value)
+
+        #process when triggers
+        for when in self.scope.when[name]:
+            when.check(self)
 
     def push_scope(self):
         self.stack.append(dataclasses.replace(self.scope))
@@ -77,16 +88,6 @@ class Ctx:
         self.scope = self.stack.pop()
 
     def scheduler(self, continuation):
-        
-        self.when_level += 1
-        if self.when_level == 1:
-            # keep running while when can be triggered
-            while any(
-                when.check(self)
-                for when in self.scope.when
-            ): pass
-        self.when_level -= 1
-
         continuation()
 
 

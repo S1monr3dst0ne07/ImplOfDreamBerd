@@ -2,6 +2,8 @@
 import obj
 
 class Builtin:
+    ctx : obj.Ctx
+
     def print(value):
         print(value.render())
         return "<print>"
@@ -15,12 +17,13 @@ class Builtin:
         )
 
     def pop(value):
+        elem = value.content.pop(0)
         value._edit()
-        return value.content.pop(0)
+        return elem
 
     def push(value, new):
-        value._edit()
         value.content.append(new)
+        value._edit()
         return Builtin._null()
 
     def true():
@@ -42,6 +45,7 @@ def get_all():
     return builtins
 
 def inject(ctx):
+    Builtin.ctx = ctx
     for name, func in get_all().items():
         ctx.scope[name] = obj.Value(
             content = func,
@@ -53,4 +57,5 @@ def inject(ctx):
 
     ctx.scope['True'] = ctx.scope['true']
     ctx.scope['False'] = ctx.scope['false']
+
 

@@ -70,6 +70,9 @@ class AstScopeAccess:
         #otherwise it has to have been a variable access
         return value
 
+    def vars(self):
+        return [self.iden] + [x.vars() for x in self.params]
+
 
 
 @dc
@@ -197,6 +200,12 @@ class AstLeaf:
 
         return self.value
 
+    def vars(self):
+        if type(self.value) is obj.Value:
+            return []
+
+        return self.value.vars()
+
 
 @dc
 class AstUn:
@@ -222,6 +231,9 @@ class AstUn:
             case '-': res = -value
 
         return obj.Value(content=res, kind=sub.kind)
+
+    def vars(self):
+        return self.sub.vars()
 
 
 
@@ -277,6 +289,8 @@ class AstExpr:
 
         return obj.Value(content=res, kind=left.kind)
 
+    def vars(self):
+        return self.left.vars() + self.right.vars()
 
 
 
@@ -311,14 +325,15 @@ class AstWhen:
         return cls(cond, body)
 
     def run(self, ctx):
-        ctx.scope.when.append(self) 
+        for dep in self.cond.vars():
+            if dep not in ctx.scope.when:
+                ctx.scope.when[dep] = []
+
+            ctx.scope.when[dep].append(self)
 
     def check(self, ctx):
         if self.cond.run(ctx).content:
             self.body.run(ctx)
-            return True
-
-        return False
 
 
 @dc
@@ -390,6 +405,7 @@ class AstDecl:
         ctx.scope[self.name] = init
 
 
+
 @dc
 class AstAssign:
     dst : typing.Any
@@ -419,10 +435,11 @@ class AstAssign:
     def run(self, ctx):
         dst = self.dst.run(ctx, lvalue=True)
         src = self.src.run(ctx)
-        dst._assign()
 
         dst.content = src.content
         dst.kind    = src.kind
+
+        dst._assign(ctx)
 
 @dc
 class AstFuncDef:
