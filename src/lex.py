@@ -74,8 +74,9 @@ class Streamer:
             error.token(tok, f"Expected `{should}` but go `{tok.content}`.")
 
     def lookhead(self, count):
-        toks = [self.popt() for _ in range(count)]
-        self.stream = toks + self.stream
+        stream = self.stream.copy()
+        toks = [self.popt() if self.has() else Token('', '', 0) for _ in range(count)]
+        self.stream = stream
         return toks
 
 

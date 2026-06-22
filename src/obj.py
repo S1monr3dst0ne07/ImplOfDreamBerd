@@ -49,18 +49,34 @@ class Value:
                 error.error(f"Unable to render type: `{x}`")
 
 @dc
+class Scope:
+    locals : dict[str, Value] = field(default_factory=lambda: {})
+    when   : list["tree.AstWhen"] = field(default_factory=lambda: [])
+
+    def __getitem__(self, index):
+        return self.locals[index]
+    def __setitem__(self, index, new):
+        self.locals[index] = new
+    def __contains__(self, elem):
+        return elem in self.locals
+
+
+
+@dc
 class Ctx:
-    scope : dict[str, Value] = field(default_factory=lambda: {})
-    stack : list[dict[str, Value]] = field(default_factory=lambda: [])
+    scope : Scope = field(default_factory=lambda: Scope())
+    stack : list = field(default_factory=lambda: [])
 
     def push_scope(self):
-        self.stack.append(self.scope.copy())
+        self.stack.append(dataclasses.replace(self.scope))
 
     def pop_scope(self):
         self.scope = self.stack.pop()
 
-
     def scheduler(self, continuation):
+        for when in self.scope.when:
+            when.check(self)
+
         continuation()
 
 

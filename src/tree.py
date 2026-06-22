@@ -37,7 +37,7 @@ class AstScopeAccess:
             stream.expect('.')
             subj, iden = iden, stream.pop()
 
-        if stream.peek().isdigit() or stream.peekt().content not in (sym.op + sym.un_op):
+        if stream.peek().isdigit() or stream.peekt().content not in (sym.op + sym.un_op + sym.block):
             # this check is needed to prevent `x + 5` from
             # being parsed as `x(+) 5`
 
@@ -53,7 +53,7 @@ class AstScopeAccess:
             error.error(f"Identifier `{iden}` does not exist in scope.")
         return ctx.scope[iden]
 
-    def run(self, ctx):
+    def run(self, ctx, lvalue=False):
         params = (
             [self._var_lookup(ctx, self.subj)] if self.subj else [] + 
             [x.run(ctx) for x in self.params]
@@ -235,9 +235,7 @@ class AstExpr:
     right : "AstExpr | AstUn | AstLeaf"
 
     @classmethod
-    def parse(cls, stream, no_func_calls=False):
-        #! TODO: implement no_func_calls 
-
+    def parse(cls, stream):
         left = AstUn.parse(stream)
         left_space = stream.space()
 
@@ -289,11 +287,31 @@ class AstIf:
     def parse(cls, stream):
         stream.expect('if')
         cond = AstExpr.parse(stream)
+        print(stream)
         body = AstStmt.parse(stream)
         return cls(cond, body)
 
     def run(self, ctx):
-        if self.cond.run():
+        if self.cond.run(ctx).content:
+            self.body.run(ctx)
+
+@dc
+class AstWhen:
+    cond : AstExpr
+    body : "AstStmt"
+
+    @classmethod
+    def parse(cls, stream):
+        stream.expect('when')
+        cond = AstExpr.parse(stream)
+        body = AstStmt.parse(stream)
+        return cls(cond, body)
+
+    def run(self, ctx):
+        ctx.scope.when.append(self) 
+
+    def check(self, ctx):
+        if self.cond.run(ctx).content:
             self.body.run(ctx)
 
 
@@ -305,7 +323,7 @@ class AstBlock:
 
     @classmethod
     def parse(cls, stream, prog=False):
-        if not prog: stream.expect('{')
+        if not prog: stream.expect('{') #}
 
         stmts = []
         while stream.has():
@@ -373,10 +391,7 @@ class AstAssign:
 
     @classmethod
     def parse(cls, stream):
-        dst = AstExpr.parse(
-            stream, 
-            no_func_calls=True #makes it possible to parse signals
-        )
+        dst = AstScopeAccess.parse(stream)
         stream.expect('=')
         src = AstExpr.parse(stream)
 
@@ -477,6 +492,9 @@ class AstStmt:
                 need_eos = False
             case 'if', _: 
                 sub = AstIf.parse(stream)
+                need_eos = False
+            case 'when', _:
+                sub = AstWhen.parse(stream)
                 need_eos = False
 
             case _, '[': #]
