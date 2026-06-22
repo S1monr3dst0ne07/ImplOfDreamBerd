@@ -1,6 +1,7 @@
 
 from dataclasses import dataclass as dc
 from dataclasses import field
+import dataclasses
 import typing
 
 import error
@@ -67,6 +68,8 @@ class Ctx:
     scope : Scope = field(default_factory=lambda: Scope())
     stack : list = field(default_factory=lambda: [])
 
+    when_level : int = 0
+
     def push_scope(self):
         self.stack.append(dataclasses.replace(self.scope))
 
@@ -74,8 +77,12 @@ class Ctx:
         self.scope = self.stack.pop()
 
     def scheduler(self, continuation):
-        for when in self.scope.when:
-            when.check(self)
+        
+        self.when_level += 1
+        if self.when_level == 1:
+            for when in self.scope.when:
+                when.check(self)
+        self.when_level -= 1
 
         continuation()
 

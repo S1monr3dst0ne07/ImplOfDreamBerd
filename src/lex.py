@@ -40,12 +40,12 @@ class Streamer:
         if self.stream[0].kind == "space":
             self.stream.pop(0)
 
-    def peekt(self):
-        self._check()
+    def peekt(self, nocheck=False):
+        if not nocheck: self._check()
         return self.stream[0]
 
-    def popt(self):
-        self._check()
+    def popt(self, nocheck=False):
+        if not nocheck: self._check()
         return self.stream.pop(0)
 
     def peek(self):
@@ -62,8 +62,8 @@ class Streamer:
     # discarded by the lexer. Streamer.space skips whitespace
     # in circumstances where it doesn't matter
     def space(self):
-        if self.has() and self.peekt().kind == "space":
-            return len(self.pop())
+        if self.stream and self.stream[0].kind == "space":
+            return len(self.stream.pop(0).content)
 
         return 0
         

@@ -144,6 +144,7 @@ class AstLeaf:
         string_segments = []
         while cls._compute_quote_size(stream.peekt()) != size:
             string_segments.append(stream.pop()) 
+            string_segments.append(" " * stream.space())
         stream.pop() #discard closing quote
 
         return "".join(string_segments)
@@ -267,7 +268,10 @@ class AstExpr:
             case '-': res = l - r
             case '*': res = l * r
             case '/': res = l / r
-            case '===': res = l == r
+            case '==': res = l == r
+            case ';=': res = l != r
+            case '<': res = l < r
+            case '>': res = l > r
 
             case x: print(f"UNIMPLEMENTED OP: {x}")
 
@@ -287,7 +291,6 @@ class AstIf:
     def parse(cls, stream):
         stream.expect('if')
         cond = AstExpr.parse(stream)
-        print(stream)
         body = AstStmt.parse(stream)
         return cls(cond, body)
 
@@ -339,7 +342,7 @@ class AstBlock:
         step = index + offset
 
         if len(self.stmts) == step:
-            return res
+            return ctx.scheduler(lambda: res)
 
         #pass continuation into context scheduler.
         # this is some fucking haskell level programming right here.
@@ -474,7 +477,10 @@ class AstStmt:
             if word[i] == char:
                 i += 1
 
-        return len(word) == i
+            if len(word) == i:
+                return True
+
+        return False
             
 
 
@@ -495,7 +501,7 @@ class AstStmt:
                 need_eos = False
             case 'when', _:
                 sub = AstWhen.parse(stream)
-                need_eos = False
+                need_eos = type(sub) is AstExpr
 
             case _, '[': #]
                 sub = AstAssign.parse_index_access(stream)
@@ -503,8 +509,9 @@ class AstStmt:
             case _, '=':
                 sub = AstAssign.parse(stream)
 
-            case x, _ if cls._is_func_keyword(x):
+            case x, name if cls._is_func_keyword(x) and name.isalpha():
                 sub = AstFuncDef.parse(stream)
+                need_eos = False
 
             case x, y if all(i in ('const', 'var') for i in (x, y)):
                 sub = AstDecl.parse(stream)
