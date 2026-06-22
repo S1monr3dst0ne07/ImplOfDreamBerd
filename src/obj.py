@@ -80,8 +80,11 @@ class Ctx:
         
         self.when_level += 1
         if self.when_level == 1:
-            for when in self.scope.when:
+            # keep running while when can be triggered
+            while any(
                 when.check(self)
+                for when in self.scope.when
+            ): pass
         self.when_level -= 1
 
         continuation()

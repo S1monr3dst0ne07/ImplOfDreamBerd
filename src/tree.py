@@ -316,6 +316,9 @@ class AstWhen:
     def check(self, ctx):
         if self.cond.run(ctx).content:
             self.body.run(ctx)
+            return True
+
+        return False
 
 
 @dc
