@@ -16,6 +16,10 @@ class Value:
     editable   : bool = True
     assignable : bool = True
 
+    stmt_alive : bool = True # local statement aliveness (updated by tree.AstBlock on schedule pass)
+    time_born : int = -1 #unix timestamp of last variable conception
+    time_parent : "tree.AstDecl" = None #who gave birth to variable
+
     def _edit(self, ctx):
         if not self.editable:
             error.error(f'Attempting to edit uneditable value: `{self.render()}`')
@@ -28,6 +32,12 @@ class Value:
 
     def _mut(self, ctx):
         ctx.mutate(self)
+
+    def alive(self):
+        if self.stmt_alive: return True
+        #TODO: implement time based live times
+
+        return False
 
     def render(self):
             

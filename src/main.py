@@ -10,6 +10,7 @@ def main():
 
     stream = lex.tokenize(path)
     root = tree.AstProg.parse(stream)
+    root.infer() #lifetime inferrence pass 
     ctx = obj.Ctx()
     root.run(ctx)
 

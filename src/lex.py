@@ -17,6 +17,8 @@ def get_kind(char):
         case '}': return 'blockclose'
         case '[': return 'arrayopen'
         case ']': return 'arrayclose'
+        case '<': return 'lifeopen'
+        case '>': return 'lifeclose'
         case '.': return 'dot'
         case '\n': return 'newline'
         case x if x.isdigit(): return 'numb'

@@ -51,6 +51,11 @@ class AstScopeAccess:
     def _var_lookup(self, ctx, iden):
         if iden not in ctx.scope:
             error.error(f"Identifier `{iden}` does not exist in scope.")
+    
+        var = ctx.scope[iden]
+        if not var.alive():
+            error.error(f"Trying to access variable `{iden}` but it's dead :(")
+    
         return ctx.scope[iden]
 
     def run(self, ctx, lvalue=False):
@@ -129,6 +134,8 @@ class AstIndexAccess:
 @dc
 class AstLeaf:
     value : obj.Value
+
+    def infer(self): pass
 
     @staticmethod
     def _compute_quote_size(token):
@@ -317,6 +324,9 @@ class AstWhen:
     cond : AstExpr
     body : "AstStmt"
 
+    def infer(self):
+        self.body.infer()
+
     @classmethod
     def parse(cls, stream):
         stream.expect('when')
@@ -340,6 +350,12 @@ class AstWhen:
 class AstBlock:
     stmts : list["AstStmt"]
 
+    stmt_alive : list[set] #which vars alive during statement
+    stmt_dead  : list[set] #"-" dead "-"
+
+    #declaration have to be executed as soon as their lifetime starts 
+    decl_init  : dict[str, "AstDecl"]
+
     class BlockClose: pass
 
     @classmethod
@@ -353,12 +369,65 @@ class AstBlock:
             stmts.append(sub)
 
         if not prog: stream.expect('}')
-        return cls(stmts)
+        return cls(stmts, [], [], {})
+
+    def infer(self):
+        self.stmt_alive = [set() for _ in self.stmts]
+        relevent_stmts = [
+            stmt for stmt in self.stmts 
+            if type(stmt.sub) is AstDecl and
+            stmt.sub.lifetime is not None and
+            not stmt.sub.lifetime[1] #make sure not seconds based
+        ]
+
+        for stmt in relevent_stmts:
+            decl = stmt.sub
+            self.decl_init[decl.name] = decl
+
+        #compute which variables are alive during each statement
+        for index, stmt in enumerate(self.stmts):
+            if stmt not in relevent_stmts: continue
+            decl = stmt.sub
+
+            length, _ = decl.lifetime
+            timetravel = length < 0
+
+            offset = (-1 if timetravel else 0)
+            for _ in range(abs(length)):
+                self.stmt_alive[index + offset].add(decl.name)
+                offset += (-1 if timetravel else 1)
+
+        #compute compliment (insert deep quote about yin and yang or smth)
+        for index, stmt in enumerate(self.stmts):
+            self.stmt_dead.append(set(
+                varname for varname in [x.sub.name for x in relevent_stmts]
+                if varname not in self.stmt_alive[index]
+            ))
+
+        #infer recursive
+        for stmt in self.stmts:
+            stmt.infer()
 
     def run(self, ctx, offset=1, index=0):
+        #update variable livenesses
+        def update(name, state):
+            if name not in ctx.scope:
+                #make sure alive variables are present in scope.
+                #this is the actual time travel part right here lol,
+                #we're executing a statement before it should actual run.
+                if state: self.decl_init[name].run(ctx)
+                else: return
+
+            ctx.scope[name].stmt_alive = state
+
+        for name in self.stmt_alive[index]: update(name, True)
+        for name in self.stmt_dead [index]: update(name, False)
+
+        #actual statment execution
         res = self.stmts[index].run(ctx)
         step = index + offset
 
+        #scheduler base case
         if len(self.stmts) == step:
             return ctx.scheduler(lambda: res)
 
@@ -376,6 +445,12 @@ class AstDecl:
     name : str
     expr : AstExpr
 
+    # bool => true: seconds based, false: statement based
+    lifetime : tuple[int, bool] | None
+
+    def infer(self):
+        pass
+
     @classmethod
     def parse(cls, stream):
         assignable = {'const' : False, 'var' : True}[stream.pop()]
@@ -385,18 +460,28 @@ class AstDecl:
 
         name = stream.pop()
 
+        lifetime = None
+        if stream.peekt().kind == 'lifeopen':
+            stream.expect('<')
+
+            sign = stream.peek() == '-'
+            if sign: stream.expect('-')
+
+            lifetime = [int(stream.pop()), stream.peek() == 's']
+            if lifetime[1]: stream.expect('s')
+            if sign: lifetime[0] *= -1
+
+            stream.expect('>')
+
         if stream.peek() != '=':
             error.token(stream.pop(), "Expected `=`.")
         stream.pop()
 
         expr = AstExpr.parse(stream)
 
-        return cls(editable, assignable, name, expr)
+        return cls(editable, assignable, name, expr, lifetime)
 
     def run(self, ctx):
-        if self.name in ctx.scope:
-            error.error(f"Variable `{self.name}` already declared.")
-
         init = self.expr.run(ctx)
 
         init.editable = self.editable
@@ -410,6 +495,8 @@ class AstDecl:
 class AstAssign:
     dst : typing.Any
     src : typing.Any
+
+    def infer(self): pass
 
     @classmethod
     def parse(cls, stream):
@@ -503,6 +590,8 @@ class AstStmt:
         return False
             
 
+    def infer(self):
+        self.sub.infer()
 
     @classmethod
     def parse(cls, stream):
@@ -571,6 +660,9 @@ class AstProg:
         builtin.inject(ctx)
 
         self.content.run(ctx)
+
+    def infer(self):
+        self.content.infer()
             
 
 
