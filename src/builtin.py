@@ -6,7 +6,7 @@ import obj
 
 key_down_funcs = list()
 key_up_funcs   = list()
-key_encode_literal = lambda event: obj.Value(content=event.char, kind='char')
+key_encode_literal = lambda event: obj.Value(content=[obj.Value(content=event.char, kind='char')], kind='string')
 key_listener = keyboard.Listener(
     on_press    = lambda event: [x(key_encode_literal(event)) for x in key_down_funcs],
     on_release  = lambda event: [x(key_encode_literal(event)) for x in key_up_funcs],
