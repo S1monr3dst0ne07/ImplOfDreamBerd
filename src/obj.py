@@ -5,6 +5,7 @@ import dataclasses
 import typing
 import time
 import json
+import copy
 
 import error
 from conf import Config
@@ -26,19 +27,6 @@ class Value:
 
     stmt_alive : bool = True # local statement aliveness (updated by tree.AstBlock on schedule pass)
     time_born : int = -1 #unix timestamp of last variable conception
-
-    def shallow(self):
-        # shallow object copy for creating scopes.
-        return Value(
-            content = self.content,
-            kind = self.kind,
-            editable   = self.editable,
-            assignable = self.assignable,
-            lifetime = self.lifetime,
-            lifetype = self.lifetype,
-            stmt_alive = self.stmt_alive,
-            time_born  = self.time_born
-        ) 
 
     def __hash__(self):
         match self.content:
@@ -162,7 +150,9 @@ class Scope:
 
     def copy(self):
         new = Scope()
-        new.locals = { k : v.shallow() for k, v in self.locals.items() }
+        # the values in scope must be shallow copies to allow
+        # passing and editing contains in different scopes.
+        new.locals = { k : copy.copy(v) for k, v in self.locals.items() }
         new.when   = self.when.copy()
         return new
 
