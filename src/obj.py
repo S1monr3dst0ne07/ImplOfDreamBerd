@@ -3,6 +3,7 @@ from dataclasses import dataclass as dc
 from dataclasses import field
 import dataclasses
 import typing
+import time
 
 import error
 
@@ -16,9 +17,10 @@ class Value:
     editable   : bool = True
     assignable : bool = True
 
+    parent : "tree.AstDecl" = None #where was the variable declared
+
     stmt_alive : bool = True # local statement aliveness (updated by tree.AstBlock on schedule pass)
     time_born : int = -1 #unix timestamp of last variable conception
-    time_parent : "tree.AstDecl" = None #who gave birth to variable
 
     def _edit(self, ctx):
         if not self.editable:
@@ -34,9 +36,18 @@ class Value:
         ctx.mutate(self)
 
     def alive(self):
-        if self.stmt_alive: return True
+        if self.parent is None:
+            return True
 
-        return False
+        match self.parent.lifetype:
+            case 'stmt': return self.stmt_alive
+            case 'sec' :
+                passed = time.time() - self.time_born
+                return passed < self.parent.lifetime
+
+            case x:
+                error.internal(f"Unknown lifetype: `{x}`")
+
 
     def render(self):
             

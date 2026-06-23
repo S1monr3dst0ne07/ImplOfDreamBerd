@@ -378,7 +378,7 @@ class AstBlock:
             stmt for stmt in self.stmts 
             if type(stmt.sub) is AstDecl and
             stmt.sub.lifetime is not None and
-            not stmt.sub.lifetype #make sure not seconds based
+            stmt.sub.lifetype == 'stmt'
         ]
 
         for stmt in relevent_stmts:
@@ -445,7 +445,7 @@ class AstDecl:
     expr : AstExpr
 
     lifetime : int | None
-    lifetype : bool # bool => true: seconds based, false: statement based
+    lifetype : typing.Literal['stmt', 'sec'] 
 
     def infer(self):
         pass
@@ -460,7 +460,7 @@ class AstDecl:
         name = stream.pop()
 
         lifetime = None
-        lifetype = False
+        lifetype = 'stmt'
         if stream.peekt().kind == 'lifeopen':
             stream.expect('<')
 
@@ -469,8 +469,9 @@ class AstDecl:
 
             lifetime = int(stream.pop()) * (-1 if sign else 1)
 
-            lifetype = stream.peek() == 's'
-            if lifetype: stream.expect('s')
+            if stream.peek() == 's':
+                stream.expect('s')
+                lifetype = 'sec'
 
             stream.expect('>')
 
@@ -479,7 +480,6 @@ class AstDecl:
         stream.pop()
 
         expr = AstExpr.parse(stream)
-
         return cls(editable, assignable, name, expr, lifetime, lifetype)
 
     def run(self, ctx):
@@ -489,10 +489,11 @@ class AstDecl:
         init.assignable = self.assignable
 
         ctx.scope[self.name] = init
+        ctx.scope[self.name].parent = self
 
-        #register local
+        #register local creation time
         ctx.scope[self.name].time_born = time.time()
-        ctx.scope[self.name].time_parent = self
+        
 
 
 
