@@ -27,6 +27,19 @@ class Value:
     stmt_alive : bool = True # local statement aliveness (updated by tree.AstBlock on schedule pass)
     time_born : int = -1 #unix timestamp of last variable conception
 
+    def __hash__(self):
+        match self.content:
+            case list(): return hash(tuple(self.content))
+            case x:      return hash(self.content)
+
+    def flat(self):
+        subvalues = [self]
+        match self.kind:
+            case 'string': subvalues += [x.flat() for x in self.content]
+            case 'array' | 'dict': subvalues += [x.flat() for x in self.content.values()]
+
+        return subvalues
+
     def _edit(self, ctx):
         if not self.editable:
             error.error(f'Attempting to edit uneditable value: `{self.render()}`')
@@ -59,8 +72,8 @@ class Value:
                 return ''.join(x.render() for x in self.content)
             case 'char':
                 return self.content
-            case 'null':
-                return "NULL"
+            case 'null': return "NULL"
+            case 'undefined': return "undefined"
             case 'int' | 'float' | 'bool':
                 return str(self.content)
             case 'array':
@@ -73,6 +86,9 @@ class Value:
 
                 seg.pop()
                 return f"[{''.join(seg)}]"
+
+            case 'dict':
+                return str({ k.render() : v.render() for k, v in self.content.items()})
 
             case x:
                 error.error(f"Unable to render type: `{x}`")
@@ -125,6 +141,13 @@ class Scope:
     locals : dict[str, Value] = field(default_factory=lambda: {})
     when   : dict[str, list["tree.AstWhen"]] = field(default_factory=lambda: {})
 
+    def find_local_name_by_value(self, value):
+        for name, supervalue in self.locals.items():
+            for subvalue in supervalue.flat():
+                if subvalue is value:
+                    return name
+
+
     def __getitem__(self, index):
         return self.locals[index]
     def __setitem__(self, index, new):
@@ -156,12 +179,15 @@ class Ctx:
             json.dump(db, f, indent=3) # wow, look, even the variable database file uses 3 space as indents.
 
     def mutate(self, value):
-        #lookup name of object in scope
-        name = next(k for k,v in self.scope.locals.items() if v == value)
+        self.when_trigger(value)
 
-        #process when triggers
-        for when in self.scope.when[name]:
-            when.check(self)
+    def when_trigger(self, value):
+        #lookup name of object in scope
+        name = self.scope.find_local_name_by_value(value)
+
+        if name in self.scope.when:
+            for when in self.scope.when[name]:
+                when.check(self)
 
     def push_scope(self):
         self.stack.append(dataclasses.replace(self.scope))

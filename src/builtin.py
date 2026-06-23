@@ -1,10 +1,29 @@
 
 import time
+from pynput import keyboard
 
 import obj
 
+key_down_funcs = list()
+key_up_funcs   = list()
+key_encode_literal = lambda event: obj.Value(content=event.char, kind='char')
+key_listener = keyboard.Listener(
+    on_press    = lambda event: [x(key_encode_literal(event)) for x in key_down_funcs],
+    on_release  = lambda event: [x(key_encode_literal(event)) for x in key_up_funcs],
+)
+key_listener.start()
+
+
+
 class Builtin:
     ctx : obj.Ctx
+
+    def addEventListener(event, func):
+        metafunc = lambda char: func.content.call(Builtin.ctx, [char])
+        match event.render():
+            case 'keydown': key_down_funcs.append(metafunc)
+            case 'keyup'  :   key_up_funcs.append(metafunc)
+
 
     def print(value):
         print(value.render())
@@ -35,6 +54,11 @@ class Builtin:
 
     def sleep(secs):
         time.sleep(1)
+
+    def undefined():
+        return obj.Value(content=None, kind='undefined')
+    def maybe():
+        return obj.Value(content='maybe', kind='bool')
 
 
 def get_all():

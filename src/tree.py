@@ -27,6 +27,15 @@ class AstScopeAccess:
     subj : str | None # optional subject prefix
     params : list[typing.Any]
 
+
+    def _can_param_token(word):
+        if word.isdigit(): return True
+        if word.isalpha(): return True
+
+        if word in ('"', "'"): return True
+
+        return False
+
     @classmethod
     def parse(cls, stream):
         iden = stream.pop()
@@ -38,7 +47,8 @@ class AstScopeAccess:
             stream.expect('.')
             subj, iden = iden, stream.pop()
 
-        if stream.peek().isdigit() or stream.peekt().content not in (sym.op + sym.un_op + sym.block):
+        #if stream.peek().isdigit() or stream.peekt().content not in (sym.op + sym.un_op + sym.block):
+        if cls._can_param_token(stream.peek()):
             # this check is needed to prevent `x + 5` from
             # being parsed as `x(+) 5`
 
@@ -70,7 +80,8 @@ class AstScopeAccess:
             # calls as function if type if iden in scope is metafunc
             return value.content(*params)
 
-        if value.kind == 'func':
+        #if the parameter counts don't match, it's a function literal
+        if value.kind == 'func' and len(params) == len(value.content.params):
             return value.content.call(ctx, params)
 
         #otherwise it has to have been a variable access
@@ -105,6 +116,19 @@ class AstLitArray:
         )
 
 @dc
+class AstLitDict:
+
+    @classmethod
+    def parse(cls, stream):
+        stream.expect("{")
+        stream.expect("}")
+
+        return cls()
+
+    def run(self, ctx):
+        return obj.Value(content={}, kind='dict')
+
+@dc
 class AstIndexAccess:
     name : str
     index : "AstExpr"
@@ -120,13 +144,21 @@ class AstIndexAccess:
 
     def run(self, ctx, lvalue=False):
         value = ctx.scope[self.name]
-        index = self.index.run(ctx).content
+        index = self.index.run(ctx)
 
         match value.kind:
             case 'array':
-                index += 1
+                if index.kind not in ('int', 'float'):
+                    error.error(f"Array access with non-numeric index: `{index.content}`")
+
+                index = index.content + 1
                 if lvalue and index not in value.content:
                     value.content[index] = obj.Value(None, 'null')
+                return value.content[index]
+
+            case 'dict':
+                if index not in value.content:
+                    value.content[index] = obj.Value(None, 'undefined')
                 return value.content[index]
         
 
@@ -188,6 +220,8 @@ class AstLeaf:
                 
             case 'arrayopen':
                 value = AstLitArray.parse(stream)
+            case 'blockopen':
+                value = AstLitDict.parse(stream)
 
             case 'iden' | 'sym': 
                 if stream.lookhead(2)[1].kind == 'arrayopen':
@@ -201,7 +235,7 @@ class AstLeaf:
         return cls(value)
 
     def run(self, ctx):
-        if type(self.value) in (AstScopeAccess, AstLitArray, AstIndexAccess):
+        if type(self.value) in (AstScopeAccess, AstLitArray, AstLitDict, AstIndexAccess):
             return self.value.run(ctx)
 
         #renamed literal number
@@ -281,8 +315,8 @@ class AstExpr:
         left  = self.left.run(ctx)
         right = self.right.run(ctx)
 
-        if right.kind != left.kind:
-            error.error(f"Cannot operator with `{self.op}` on `{left.render()}` and `{right.render()}` because their types do not match.")
+        if right.kind != left.kind and self.op in ('+', '-', '*', '/'):
+            error.error(f"Cannot operate with `{self.op}` on `{left.render()}` and `{right.render()}` because their types do not match.")
 
         l = left.content
         r = right.content
@@ -312,6 +346,9 @@ class AstIf:
     cond : AstExpr
     body : "AstStmt"
 
+    def infer(self):
+        self.body.infer()
+
     @classmethod
     def parse(cls, stream):
         stream.expect('if')
@@ -320,7 +357,11 @@ class AstIf:
         return cls(cond, body)
 
     def run(self, ctx):
-        if self.cond.run(ctx).content:
+        cond = self.cond.run(ctx).content
+        if cond not in (True, False):
+            error.error(f"Indecisive condition: `{cond.render()}`")
+
+        if cond:
             self.body.run(ctx)
 
 @dc
@@ -563,7 +604,6 @@ class AstFuncDef:
         params = []
         while stream.peek() != '=':
             params.append(stream.pop())
-            print(params)
             if stream.peek() == ',':
                 stream.expect(',')
         stream.expect('=')

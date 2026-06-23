@@ -4,12 +4,17 @@ import sys
 
 def error(msg):
     print(f"Error: {msg}")
-    sys.exit(1)
+    _trace()
 
 def internal(msg):
     print(f"INTERNAL ERROR (this is most certainly a bug): {msg}")
-    sys.exit(1)
+    _trace()
 
 def token(token, msg):
     print(f"Error on line {token.line}: {msg}")
+    _trace()
+
+def _trace():
+    import traceback
+    traceback.print_stack()
     sys.exit(1)
