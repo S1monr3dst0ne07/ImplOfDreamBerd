@@ -170,7 +170,7 @@ class Ctx:
         self.scope = self.stack.pop()
 
     def scheduler(self, continuation):
-        continuation()
+        return continuation()
 
 
 

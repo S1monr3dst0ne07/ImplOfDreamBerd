@@ -552,17 +552,22 @@ class AstFuncDef:
     params : list[str]
     body : AstBlock | AstExpr
 
+    def infer(self):
+        self.body.infer()
+
     @classmethod
     def parse(cls, stream):
         stream.pop()
         name = stream.pop()
 
         params = []
-        while stream.peek() != '=>':
+        while stream.peek() != '=':
             params.append(stream.pop())
+            print(params)
             if stream.peek() == ',':
                 stream.expect(',')
-        stream.expect('=>')
+        stream.expect('=')
+        stream.expect('>')
 
         if stream.peek() == '{': #}
             body = AstBlock.parse(stream)
