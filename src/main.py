@@ -17,7 +17,9 @@ def main():
     ctx = obj.Ctx()
     ctx.load() # load persistent variables from database
 
-    root.run(ctx)
+    try:
+        root.run(ctx)
+    except KeyboardInterrupt: pass
 
     ctx.save() #save them back again
 

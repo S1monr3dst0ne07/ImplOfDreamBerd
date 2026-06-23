@@ -448,7 +448,7 @@ class AstDecl:
     expr : AstExpr
 
     lifetime : int | None
-    lifetype : typing.Literal['normal', 'stmt', 'sec', 'infty'] 
+    lifetype : typing.Literal['default', 'stmt', 'sec', 'infty'] 
 
     def infer(self):
         pass
@@ -463,7 +463,8 @@ class AstDecl:
         name = stream.pop()
 
         lifetime = None
-        lifetype = 'normal'
+        lifetype = 'default'
+
         if stream.peekt().kind == 'lifeopen':
             lifetype = 'stmt'
             stream.expect('<')
