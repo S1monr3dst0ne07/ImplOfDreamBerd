@@ -30,11 +30,7 @@ class Value:
     def shallow(self):
         # shallow object copy for creating scopes.
         return Value(
-            content = (
-                self.content.copy() 
-                if type(self.content) in (list, dict) 
-                else self.content
-            ),
+            content = self.content,
             kind = self.kind,
             editable   = self.editable,
             assignable = self.assignable,
