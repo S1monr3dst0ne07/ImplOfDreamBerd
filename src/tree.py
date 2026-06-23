@@ -166,10 +166,13 @@ class AstLeaf:
         match stream.peekt().kind:
             case 'numb':  
                 leaf = int(stream.pop())
+                kind = 'int'
                 if stream.peekt().kind == 'dot':
                     stream.pop()
                     leaf += float(f"0.{stream.pop()}")
-                value = obj.Value(leaf, kind='numb')
+                    kind = 'float'
+                
+                value = obj.Value(leaf, kind)
 
             case 'quote': 
                 value = obj.Value(
@@ -203,7 +206,7 @@ class AstLeaf:
 
         #renamed literal number
         numb_name = str(self.value.content)
-        if self.value.kind == 'numb' and numb_name in ctx.scope:
+        if self.value.kind == 'int' and numb_name in ctx.scope:
             return ctx.scope[numb_name]
 
         return self.value
@@ -445,7 +448,7 @@ class AstDecl:
     expr : AstExpr
 
     lifetime : int | None
-    lifetype : typing.Literal['stmt', 'sec'] 
+    lifetype : typing.Literal['normal', 'stmt', 'sec', 'infty'] 
 
     def infer(self):
         pass
@@ -460,14 +463,20 @@ class AstDecl:
         name = stream.pop()
 
         lifetime = None
-        lifetype = 'stmt'
+        lifetype = 'normal'
         if stream.peekt().kind == 'lifeopen':
+            lifetype = 'stmt'
             stream.expect('<')
+
+            if stream.peek() == 'Infinity':
+                stream.pop()
+                lifetype = 'infty'
 
             sign = stream.peek() == '-'
             if sign: stream.expect('-')
 
-            lifetime = int(stream.pop()) * (-1 if sign else 1)
+            if stream.peek().isdigit():
+                lifetime = int(stream.pop()) * (-1 if sign else 1)
 
             if stream.peek() == 's':
                 stream.expect('s')
@@ -489,7 +498,8 @@ class AstDecl:
         init.assignable = self.assignable
 
         ctx.scope[self.name] = init
-        ctx.scope[self.name].parent = self
+        ctx.scope[self.name].lifetime = self.lifetime
+        ctx.scope[self.name].lifetype = self.lifetype
 
         #register local creation time
         ctx.scope[self.name].time_born = time.time()
