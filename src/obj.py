@@ -27,6 +27,23 @@ class Value:
     stmt_alive : bool = True # local statement aliveness (updated by tree.AstBlock on schedule pass)
     time_born : int = -1 #unix timestamp of last variable conception
 
+    def shallow(self):
+        # shallow object copy for creating scopes.
+        return Value(
+            content = (
+                self.content.copy() 
+                if type(self.content) in (list, dict) 
+                else self.content
+            ),
+            kind = self.kind,
+            editable   = self.editable,
+            assignable = self.assignable,
+            lifetime = self.lifetime,
+            lifetype = self.lifetype,
+            stmt_alive = self.stmt_alive,
+            time_born  = self.time_born
+        ) 
+
     def __hash__(self):
         match self.content:
             case list(): return hash(tuple(self.content))
@@ -147,6 +164,12 @@ class Scope:
                 if subvalue is value:
                     return name
 
+    def copy(self):
+        new = Scope()
+        new.locals = { k : v.shallow() for k, v in self.locals.items() }
+        new.when   = self.when.copy()
+        return new
+
 
     def __getitem__(self, index):
         return self.locals[index]
@@ -190,7 +213,7 @@ class Ctx:
                 when.check(self)
 
     def push_scope(self):
-        self.stack.append(dataclasses.replace(self.scope))
+        self.stack.append(self.scope.copy())
 
     def pop_scope(self):
         self.scope = self.stack.pop()
