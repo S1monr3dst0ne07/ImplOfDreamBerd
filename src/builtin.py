@@ -1,4 +1,6 @@
 
+import time
+
 import obj
 
 class Builtin:
@@ -30,6 +32,9 @@ class Builtin:
         return obj.Value(content=True, kind='bool')
     def false():
         return obj.Value(content=False, kind='bool')
+
+    def sleep(secs):
+        time.sleep(1)
 
 
 def get_all():
