@@ -1,5 +1,6 @@
 
 import typing
+import time
 from dataclasses import dataclass as dc
 
 import error
@@ -377,7 +378,7 @@ class AstBlock:
             stmt for stmt in self.stmts 
             if type(stmt.sub) is AstDecl and
             stmt.sub.lifetime is not None and
-            not stmt.sub.lifetime[1] #make sure not seconds based
+            not stmt.sub.lifetype #make sure not seconds based
         ]
 
         for stmt in relevent_stmts:
@@ -389,11 +390,9 @@ class AstBlock:
             if stmt not in relevent_stmts: continue
             decl = stmt.sub
 
-            length, _ = decl.lifetime
-            timetravel = length < 0
-
+            timetravel = decl.lifetime < 0
             offset = (-1 if timetravel else 0)
-            for _ in range(abs(length)):
+            for _ in range(abs(decl.lifetime)):
                 self.stmt_alive[index + offset].add(decl.name)
                 offset += (-1 if timetravel else 1)
 
@@ -445,8 +444,8 @@ class AstDecl:
     name : str
     expr : AstExpr
 
-    # bool => true: seconds based, false: statement based
-    lifetime : tuple[int, bool] | None
+    lifetime : int | None
+    lifetype : bool # bool => true: seconds based, false: statement based
 
     def infer(self):
         pass
@@ -461,15 +460,17 @@ class AstDecl:
         name = stream.pop()
 
         lifetime = None
+        lifetype = False
         if stream.peekt().kind == 'lifeopen':
             stream.expect('<')
 
             sign = stream.peek() == '-'
             if sign: stream.expect('-')
 
-            lifetime = [int(stream.pop()), stream.peek() == 's']
-            if lifetime[1]: stream.expect('s')
-            if sign: lifetime[0] *= -1
+            lifetime = int(stream.pop()) * (-1 if sign else 1)
+
+            lifetype = stream.peek() == 's'
+            if lifetype: stream.expect('s')
 
             stream.expect('>')
 
@@ -479,7 +480,7 @@ class AstDecl:
 
         expr = AstExpr.parse(stream)
 
-        return cls(editable, assignable, name, expr, lifetime)
+        return cls(editable, assignable, name, expr, lifetime, lifetype)
 
     def run(self, ctx):
         init = self.expr.run(ctx)
@@ -488,6 +489,11 @@ class AstDecl:
         init.assignable = self.assignable
 
         ctx.scope[self.name] = init
+
+        #register local
+        ctx.scope[self.name].time_born = time.time()
+        ctx.scope[self.name].time_parent = self
+
 
 
 

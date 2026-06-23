@@ -35,7 +35,6 @@ class Value:
 
     def alive(self):
         if self.stmt_alive: return True
-        #TODO: implement time based live times
 
         return False
 
