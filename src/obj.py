@@ -47,7 +47,7 @@ class Value:
             case 'stmt': return self.stmt_alive
             case 'sec' :
                 passed = time.time() - self.time_born
-                return passed < self.parent.lifetime
+                return passed < self.lifetime
 
             case x:
                 error.internal(f"Unknown lifetype: `{x}`")
