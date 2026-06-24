@@ -15,6 +15,6 @@ def token(token, msg):
     _trace()
 
 def _trace():
-    import traceback
-    traceback.print_stack()
+    #import traceback
+    #traceback.print_stack()
     sys.exit(1)

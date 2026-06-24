@@ -64,6 +64,8 @@ class AstScopeAccess:
         return cls(iden, subj, params)
 
     def _var_lookup(self, ctx, iden):
+        if iden in ctx.eternal: return ctx.eternal[iden]
+
         if iden not in ctx.scope:
             error.error(f"Identifier `{iden}` does not exist in scope.")
     
@@ -557,6 +559,9 @@ class AstDecl:
     lifetime : int | None
     lifetype : typing.Literal['default', 'stmt', 'sec', 'infty'] 
 
+    # "immutable data"
+    eternal : bool
+
     def order(self): self.expr = self.expr.order()
     def infer(self): pass
 
@@ -566,6 +571,13 @@ class AstDecl:
         if stream.peek() not in ('const', 'var'):
             error.token(stream.pop(), "`const` / `var` not followed by `const` / `var`.")
         editable = {'const' : False, 'var' : True}[stream.pop()]
+
+        # new for 2023!
+        eternal = False
+        if not assignable and not editable and stream.peek() == 'const':
+            stream.expect('const')
+            eternal = True
+            
 
         name = stream.pop()
 
@@ -597,7 +609,8 @@ class AstDecl:
         stream.pop()
 
         expr = AstExpr.parse(stream)
-        return cls(editable, assignable, name, expr, lifetime, lifetype)
+        return cls(editable, assignable, name, expr, lifetime, lifetype, eternal)
+
 
     def run(self, ctx):
         init = self.expr.run(ctx)
@@ -609,8 +622,11 @@ class AstDecl:
         ctx.scope[self.name].lifetime = self.lifetime
         ctx.scope[self.name].lifetype = self.lifetype
 
-        #register local creation time
+        # register local creation time
         ctx.scope[self.name].time_born = time.time()
+
+        # upload variable to database if eternal
+        if self.eternal: ctx.eternal_upload(self.name)
         
 
 

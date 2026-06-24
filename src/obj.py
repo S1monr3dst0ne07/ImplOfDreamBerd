@@ -6,6 +6,7 @@ import typing
 import time
 import json
 import copy
+import redis
 
 import error
 from conf import Config
@@ -171,6 +172,35 @@ class Ctx:
     scope : Scope = field(default_factory=lambda: Scope())
     stack : list = field(default_factory=lambda: [])
 
+    eternal : dict[str, Value] = field(default_factory=lambda: {})
+
+    redis = redis.Redis(
+        host = Config.eternal_var_db,
+        port = 6379,
+        db = 0,
+        decode_responses = True
+    )
+
+    def __post_init__(self):
+        for key in self.redis.keys():
+            self.eternal[key] = Value.from_json(
+                json.loads(self.redis.get(key))
+            )
+
+    def eternal_upload(self, name):
+        if self.redis.get(name) is not None:
+            error.error(f"Unable to declare immutable `{name}` because it already exists.")
+
+        value = self.scope[name]
+
+        # update remote
+        self.redis.set(name, json.dumps(
+            self.scope[name].to_json()
+        ))
+
+        # update local cache
+        self.eternal[name] = value
+
     def load(self):
         with open(Config.local_var_db, 'r') as f:
             for k, v in json.load(f).items():
@@ -206,6 +236,7 @@ class Ctx:
 
     def scheduler(self, continuation):
         return continuation()
+
 
 
 

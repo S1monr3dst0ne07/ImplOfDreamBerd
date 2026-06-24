@@ -60,6 +60,17 @@ class Builtin:
     def maybe():
         return obj.Value(content='maybe', kind='bool')
 
+    def one():      return obj.Value(content= 1, kind='int')
+    def two():      return obj.Value(content= 2, kind='int')
+    def three():    return obj.Value(content= 3, kind='int')
+    def four():     return obj.Value(content= 4, kind='int')
+    def five():     return obj.Value(content= 5, kind='int')
+    def six():      return obj.Value(content= 6, kind='int')
+    def seven():    return obj.Value(content= 7, kind='int')
+    def eight():    return obj.Value(content= 8, kind='int')
+    def nine():     return obj.Value(content= 9, kind='int')
+    def ten():      return obj.Value(content=10, kind='int')
+
 
 def get_all():
     builtins = {}
