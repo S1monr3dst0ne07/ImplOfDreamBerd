@@ -12,6 +12,7 @@ def main():
     stream = lex.tokenize(path)
     root = tree.AstProg.parse(stream)
 
+    root.order() #whitespace based binary expression reordering
     root.infer() #lifetime inferrence pass 
 
     ctx = obj.Ctx()

@@ -27,6 +27,10 @@ class AstScopeAccess:
     subj : str | None # optional subject prefix
     params : list[typing.Any]
 
+    def order(self):
+        for i, param in enumerate(self.params):
+            self.params[i] = param.order()
+
 
     def _can_param_token(word):
         if word.isdigit(): return True
@@ -96,6 +100,10 @@ class AstScopeAccess:
 class AstLitArray:
     elems : list["AstExpr"]
 
+    def order(self):
+        for i, elem in enumerate(self.elems):
+            self.elems[i] = elem.order()
+
     @classmethod
     def parse(cls, stream):
         stream.expect('[') #]
@@ -117,6 +125,7 @@ class AstLitArray:
 
 @dc
 class AstLitDict:
+    def order(self): pass
 
     @classmethod
     def parse(cls, stream):
@@ -132,6 +141,9 @@ class AstLitDict:
 class AstIndexAccess:
     name : str
     index : "AstExpr"
+
+    def order(self):
+        self.index.order()
 
     @classmethod
     def parse(cls, stream):
@@ -166,9 +178,15 @@ class AstIndexAccess:
 
 @dc
 class AstLeaf:
-    value : obj.Value
+    META_VALUES = (AstScopeAccess, AstLitArray, AstLitDict, AstIndexAccess)
+    value : typing.Any
 
     def infer(self): pass
+    def order(self):
+        if type(self.value) in self.META_VALUES:
+            self.value.order()
+
+        return self
 
     @staticmethod
     def _compute_quote_size(token):
@@ -235,7 +253,7 @@ class AstLeaf:
         return cls(value)
 
     def run(self, ctx):
-        if type(self.value) in (AstScopeAccess, AstLitArray, AstLitDict, AstIndexAccess):
+        if type(self.value) in self.META_VALUES:
             return self.value.run(ctx)
 
         #renamed literal number
@@ -256,6 +274,8 @@ class AstLeaf:
 class AstUn:
     op : str
     sub : AstLeaf
+
+    def order(self): self.sub.order()
 
     @classmethod
     def parse(cls, stream):
@@ -291,6 +311,41 @@ class AstExpr:
     op : str
     left  : "AstExpr | AstUn | AstLeaf"
     right : "AstExpr | AstUn | AstLeaf"
+
+    def extract(self, parent):
+        if type(self.right) is not AstExpr: return (self, parent)
+
+        other = self.right.extract(self)
+        return other if other[0].space > self.space else (self, parent)
+
+
+    def order(self):
+        # after parsing, the expression tree is maximally unballanced,
+        # meaning it looks like this:
+        #   ()
+        #  / ()
+        #   / \...
+        # we extract the node with least precedence,
+        #  then pivot it and make it the new root node.
+        #  this process is repeated recursively until 
+        #  the tree is balanced based on the precedence.
+
+        new, parent = self.extract(None)
+        old = self
+
+        if new != old:
+            # you can work these operations out on paper if you think about it really really hard.
+            # i'm not even gonna try and explain them.
+            # rest assured, they balance the tree.
+            orphan = new.left
+            new.left = old
+            parent.right = orphan
+
+        #now recurse
+        new.left.order()
+        new.right.order()
+
+        return new
 
     @classmethod
     def parse(cls, stream):
@@ -346,6 +401,9 @@ class AstIf:
     cond : AstExpr
     body : "AstStmt"
 
+    def order(self): 
+        self.cond = self.cond.order()
+        self.body.order()
     def infer(self):
         self.body.infer()
 
@@ -369,6 +427,9 @@ class AstWhen:
     cond : AstExpr
     body : "AstStmt"
 
+    def order(self): 
+        self.cond = self.cond.order()
+        self.body.order()
     def infer(self):
         self.body.infer()
 
@@ -416,6 +477,10 @@ class AstBlock:
         if not prog: stream.expect('}')
         return cls(stmts, [], [], {})
 
+    def order(self):
+        for stmt in self.stmts:
+            stmt.order()
+
     def infer(self):
         self.stmt_alive = [set() for _ in self.stmts]
         relevent_stmts = [
@@ -447,9 +512,10 @@ class AstBlock:
                 if varname not in self.stmt_alive[index]
             ))
 
-        #infer recursive
+        #recursive infer
         for stmt in self.stmts:
             stmt.infer()
+
 
     def run(self, ctx, offset=1, index=0):
         #update variable livenesses
@@ -491,8 +557,8 @@ class AstDecl:
     lifetime : int | None
     lifetype : typing.Literal['default', 'stmt', 'sec', 'infty'] 
 
-    def infer(self):
-        pass
+    def order(self): self.expr = self.expr.order()
+    def infer(self): pass
 
     @classmethod
     def parse(cls, stream):
@@ -552,8 +618,12 @@ class AstDecl:
 
 @dc
 class AstAssign:
-    dst : typing.Any
-    src : typing.Any
+    dst : "AstScopeAccess | AstIndexAccess"
+    src : "AstExpr"
+
+    def order(self): 
+        self.dst.order()
+        self.src = self.src.order()
 
     def infer(self): pass
 
@@ -592,6 +662,11 @@ class AstFuncDef:
     name : str
     params : list[str]
     body : AstBlock | AstExpr
+
+    def order(self): 
+        new = self.body.order()
+        if type(self.body) is AstExpr:
+            self.body = new
 
     def infer(self):
         self.body.infer()
@@ -653,8 +728,8 @@ class AstStmt:
         return False
             
 
-    def infer(self):
-        self.sub.infer()
+    def infer(self): self.sub.infer()
+    def order(self): self.sub.order()
 
     @classmethod
     def parse(cls, stream):
@@ -713,7 +788,6 @@ class AstStmt:
 @dc
 class AstProg:
     content : AstBlock
-
     
     @classmethod
     def parse(cls, stream):
@@ -724,8 +798,9 @@ class AstProg:
 
         self.content.run(ctx)
 
-    def infer(self):
-        self.content.infer()
+    def infer(self): self.content.infer()
+    def order(self): self.content.order()
+
             
 
 
