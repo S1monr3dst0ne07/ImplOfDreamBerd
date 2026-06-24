@@ -747,8 +747,9 @@ class AstStmt:
 
     @classmethod
     def parse(cls, stream):
-        #TODO: indent detection
-        stream.space()
+        indent = stream.space()
+        if indent % 3 != 0:
+            error.token(stream.peekt(), "Invalid indentation. All indents must be 3 spaces long.")
 
         need_eos = True
         first, second = stream.lookhead(2)
@@ -788,7 +789,6 @@ class AstStmt:
             if token.kind not in ('eos', 'debug'):
                 error.token(token, "End of line is not `!` or `?`.")
 
-        stream.space()
         return cls(sub, eos)
 
     def run(self, ctx):

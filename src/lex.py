@@ -57,8 +57,7 @@ class Streamer:
         return self.popt().content
 
     def has(self):
-        self._check()
-        return len(self.stream) > 0
+        return len([x for x in self.stream if x.kind != 'space']) > 0
 
     #DB has significant whitespace which means it cannot be
     # discarded by the lexer. Streamer.space skips whitespace
