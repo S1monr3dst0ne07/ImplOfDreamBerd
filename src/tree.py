@@ -214,7 +214,6 @@ class AstLeaf:
 
     @classmethod
     def parse(cls, stream):
-        stream.space()
         match stream.peekt().kind:
             case 'numb':  
                 leaf = int(stream.pop())
@@ -251,7 +250,6 @@ class AstLeaf:
 
             case x: error.error(f"Unknown leaf kind: {stream.popt()}")
 
-        stream.space()
         return cls(value)
 
     def run(self, ctx):
