@@ -414,12 +414,13 @@ class AstExpr:
                 match x:
                     case '-': res = l - r
                     case '*': res = l * r
-                    case '/': res = l / r
+                    case '/': res = (l / r) if r != 0 else None
                     case '^': res = l ** r
 
                 match res:
                     case float(): kind = 'float'
                     case int():   kind = 'int'
+                    case None:    kind = 'undefined' # aka NaN
                     case x: error.internal("binary expression on numeric values yielded non-numeric type.")
 
             case '====':
