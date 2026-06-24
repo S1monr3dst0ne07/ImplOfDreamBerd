@@ -392,26 +392,40 @@ class AstExpr:
                     kind = left.kind
                     offset = max(l.keys()) - min(r.keys()) + 1
                     res = l | { k + offset : v for k,v in r.items() }
-                    print(res)
                 elif left.kind == right.kind == 'dict':
                     kind = left.kind
                     res = l | r
                 else:
-                    error.error(f"Cannot operate with `{self.op}` on `{left.render()}` and `{right.render()}` because their types do not match.")
+                    error.error(f"Cannot add `{left.render()}` and `{right.render()}` because they are containers and types do not match.")
 
+            case x if x in ('-', '*', '/', '^'):
+                _convert = lambda x: float(x) if '.' in x else int(x)
+                if left.kind  == 'string': l = _convert(left.render())
+                if right.kind == 'string': r = _convert(right.render())
 
+                if any(x.kind in ('dict', 'array') for x in (left, right)):
+                    _error(x)
 
-            case '-': res = l - r
-            case '*': res = l * r
-            case '/': res = l / r
-            case '^': res = l ** r
+                match x:
+                    case '-': res = l - r
+                    case '*': res = l * r
+                    case '/': res = l / r
+                    case '^': res = l ** r
+
+                match res:
+                    case float(): kind = 'float'
+                    case int():   kind = 'int'
+                    case x: error.internal("binary expression on numeric values yielded non-numeric type.")
 
             case '==': res = l == r
             case ';=': res = l != r
             case '<': res = l < r
             case '>': res = l > r
 
-            case x: print(f"UNIMPLEMENTED OP: {x}")
+            case x: _error(x)
+
+        def _error(x):
+            error.error(f"Operation `{x}` is not defined for `{left.render()}` and `{right.render()}`.")
 
         return obj.Value(content=res, kind=kind)
 

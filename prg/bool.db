@@ -1,23 +1,23 @@
 
 const var keys = {}!
 
-function keydown(key) => { keys[key] = true!  }
-function keyup  (key) => { keys[key] = false! }
+function keydown(key) => {keys[key] = true!}
+function keyup  (key) => {keys[key] = false!}
 
 addEventListener("keydown", keydown)!
 addEventListener("keyup"  , keyup  )!
 
 
 function isKeyDown(key) => {
-    keys?
-    key?
-    var var res = keys[key]!
+   keys?
+   key?
+   var var res = keys[key]!
 
-    if (res == undefined) {
-        res = maybe!
-    }
+   if (res == undefined) {
+      res = maybe!
+   }
 
-    res!
+   res!
 }
 
 
