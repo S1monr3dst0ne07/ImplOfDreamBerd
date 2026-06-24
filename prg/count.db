@@ -1,0 +1,18 @@
+
+var var count = 0!
+
+
+when (count == 0) {
+    "count done"?
+}
+
+when (count > 0) {
+    count?
+    sleep 1!
+    count = count - 1!
+}
+
+
+count = 10!
+
+
