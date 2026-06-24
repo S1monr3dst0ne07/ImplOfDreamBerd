@@ -366,20 +366,46 @@ class AstExpr:
             op = op
         )
 
+
     def run(self, ctx):
         left  = self.left.run(ctx)
         right = self.right.run(ctx)
 
-        if right.kind != left.kind and self.op in ('+', '-', '*', '/'):
-            error.error(f"Cannot operate with `{self.op}` on `{left.render()}` and `{right.render()}` because their types do not match.")
 
         l = left.content
         r = right.content
+        kind = None
         match self.op:
-            case '+': res = l + r
+            # accursed by ye, brendan eich, for making javascript.
+            # and also for being a homophobic (and prolly transphobic, let's be real) bastard.
+            case '+': 
+                if 'string' in (left.kind, right.kind):
+                    kind = 'string'
+                    res = [
+                        obj.Value(content=char, kind='char') 
+                        for char in left.render() + right.render()
+                    ]
+                elif all(x in ('float', 'int') for x in (left.kind, right.kind)):
+                    kind = 'float' if 'float' in (left.kind, right.kind) else 'int'
+                    res = l + r
+                elif left.kind == right.kind == 'array':
+                    kind = left.kind
+                    offset = max(l.keys()) - min(r.keys()) + 1
+                    res = l | { k + offset : v for k,v in r.items() }
+                    print(res)
+                elif left.kind == right.kind == 'dict':
+                    kind = left.kind
+                    res = l | r
+                else:
+                    error.error(f"Cannot operate with `{self.op}` on `{left.render()}` and `{right.render()}` because their types do not match.")
+
+
+
             case '-': res = l - r
             case '*': res = l * r
             case '/': res = l / r
+            case '^': res = l ** r
+
             case '==': res = l == r
             case ';=': res = l != r
             case '<': res = l < r
@@ -387,7 +413,7 @@ class AstExpr:
 
             case x: print(f"UNIMPLEMENTED OP: {x}")
 
-        return obj.Value(content=res, kind=left.kind)
+        return obj.Value(content=res, kind=kind)
 
     def vars(self):
         return self.left.vars() + self.right.vars()
