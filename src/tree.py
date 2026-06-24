@@ -417,6 +417,11 @@ class AstExpr:
                     case int():   kind = 'int'
                     case x: error.internal("binary expression on numeric values yielded non-numeric type.")
 
+            case '====':
+                #cursed ast comparison
+                kind = 'bool'
+                res = self.left == self.right
+
             case '==': res = l == r
             case ';=': res = l != r
             case '<': res = l < r
@@ -829,6 +834,7 @@ class AstStmt:
             if token.kind not in ('eos', 'debug'):
                 error.token(token, "End of line is not `!` or `?`.")
 
+        stream.space()
         return cls(sub, eos)
 
     def run(self, ctx):
