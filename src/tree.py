@@ -375,6 +375,13 @@ class AstExpr:
         l = left.content
         r = right.content
         kind = None
+
+        def string_to_number_cast():
+            nonlocal l, r
+            _convert = lambda x: float(x) if '.' in x else int(x)
+            if left.kind  == 'string': l = _convert(left.render())
+            if right.kind == 'string': r = _convert(right.render())
+
         match self.op:
             # accursed by ye, brendan eich, for making javascript.
             # and also for being a homophobic (and prolly transphobic, let's be real) bastard.
@@ -399,10 +406,7 @@ class AstExpr:
                     error.error(f"Cannot add `{left.render()}` and `{right.render()}` because they are containers and types do not match.")
 
             case x if x in ('-', '*', '/', '^'):
-                _convert = lambda x: float(x) if '.' in x else int(x)
-                if left.kind  == 'string': l = _convert(left.render())
-                if right.kind == 'string': r = _convert(right.render())
-
+                string_to_number_cast()
                 if any(x.kind in ('dict', 'array') for x in (left, right)):
                     _error(x)
 
@@ -422,7 +426,22 @@ class AstExpr:
                 kind = 'bool'
                 res = self.left == self.right
 
-            case '==': res = l == r
+            case '===': # tight equality
+                kind = 'bool'
+                res = l == r
+
+            case '==': # loose equality
+                kind = 'bool'
+                string_to_number_cast()
+                res = l == r
+
+            case '=': # even looser equality
+                kind = 'bool'
+                string_to_number_cast()
+                if type(l) is float: l = round(l)
+                if type(r) is float: r = round(r)
+                res = l == r
+
             case ';=': res = l != r
             case '<': res = l < r
             case '>': res = l > r
