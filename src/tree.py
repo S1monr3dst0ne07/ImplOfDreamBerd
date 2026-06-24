@@ -319,6 +319,7 @@ class AstExpr:
         return other if other[0].space > self.space else (self, parent)
 
 
+    def infer(self): pass
     def order(self):
         # after parsing, the expression tree is maximally unballanced,
         # meaning it looks like this:
@@ -837,15 +838,14 @@ class AstStmt:
 
             case x, name if cls._is_func_keyword(x) and name.isalpha():
                 sub = AstFuncDef.parse(stream)
-                need_eos = False
+                need_eos = type(sub.body) is AstExpr
 
             case x, y if all(i in ('const', 'var') for i in (x, y)):
                 sub = AstDecl.parse(stream)
 
             case x: 
                 sub = AstExpr.parse(stream)
-
-
+    
         eos = None
         if need_eos:
             token = stream.popt()
