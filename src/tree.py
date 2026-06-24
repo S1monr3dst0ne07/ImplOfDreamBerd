@@ -75,7 +75,25 @@ class AstScopeAccess:
     
         return ctx.scope[iden]
 
+    def _check_string_without_quote(self, ctx):
+        return (self.iden not in ctx.eternal and self.iden not in ctx.scope)
+
+    def _process_string_without_quote(self, ctx):
+        segments = [self.iden] + [x.run(ctx).render() for x in self.params]
+        return obj.Value(content=[
+            obj.Value(content=char, kind='char')
+            for char in " ".join(segments) 
+                #space information is lost during parsing.
+                #retaining it would require so, so, so much work.
+                #plus the example don't show multi-space quoteless strings,
+                # so what do i care.
+        ], kind='string')
+
+
     def run(self, ctx, lvalue=False):
+        if self._check_string_without_quote(ctx) and not lvalue: 
+            return self._process_string_without_quote(ctx)
+
         params = (
             [self._var_lookup(ctx, self.subj)] if self.subj else [] + 
             [x.run(ctx) for x in self.params]
