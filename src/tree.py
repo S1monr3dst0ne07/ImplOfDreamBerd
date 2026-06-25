@@ -7,6 +7,7 @@ import error
 import sym
 import obj
 import builtin
+import conf
 
 
 
@@ -217,6 +218,73 @@ class AstLeaf:
 
         return size
 
+    def _format_string(self, ctx):
+        currency = conf.locale_currency_mapper[conf.Config.locale]
+        string = self.value.render()
+        if currency.symbol not in string: return self.value
+
+        out = []
+        symbol_state = False
+        reading_name = False
+        name = ""
+
+        match currency.kind:
+            case 'prefix':
+                for char in string:
+                    if char == '{' and symbol_state: #}
+                        reading_name = True
+                        continue
+                    if char == '}' and reading_name:
+                        reading_name = False
+                        if name in ctx.scope:
+                            out.pop(-1) #remove prefix
+                            out.append(ctx.scope[name].render())
+                        else:
+                            out.append("{")
+                            out.append(name)
+                            out.append("}")
+
+                        continue
+                        
+                    if reading_name: name += char
+                    else: out.append(char)
+                    symbol_state = char == currency.symbol
+            case 'suffix':
+                for char in string:
+                    if char == '{': #}
+                        reading_name = True
+                        continue
+                    if char == '}' and reading_name:
+                        reading_name = False
+                        symbol_state = True
+                        continue
+
+                    if symbol_state:
+                        symbol_state = False
+                        if char == currency.symbol:
+                            if name in ctx.scope:
+                                out.append(ctx.scope[name].render())
+                                continue
+                            else:
+                                out.append("{")
+                                out.append(name)
+                                out.append("}")
+                        
+                    if reading_name: name += char
+                    else: out.append(char)
+
+            case x:
+                error.internal(f"undefined currency kind: `{x}`")
+
+
+        print(out)
+        return obj.Value(
+            content=[
+                obj.Value(content = x, kind = 'char')
+                for x in "".join(out)],
+            kind = 'string'
+        )
+
     @classmethod
     def _parse_string(cls, stream):
         token = stream.popt()
@@ -245,14 +313,11 @@ class AstLeaf:
 
             case 'quote': 
                 value = obj.Value(
-                    content = [obj.Value(
-                        content = x,
-                        kind = 'char',
-                        editable = True,
-                        assignable = True,
-                    ) for x in 
-                    cls._parse_string(stream)],
-                    kind = 'string',
+                    content = [
+                        obj.Value(content = x, kind = 'char') 
+                        for x in cls._parse_string(stream)
+                    ],
+                    kind = 'string'
                 )
                 
             case 'arrayopen':
@@ -278,6 +343,10 @@ class AstLeaf:
         numb_name = str(self.value.content)
         if self.value.kind == 'int' and numb_name in ctx.scope:
             return ctx.scope[numb_name]
+
+        #format string
+        if self.value.kind == 'string':
+            return self._format_string(ctx)
 
         return self.value
 
