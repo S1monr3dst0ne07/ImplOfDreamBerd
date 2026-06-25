@@ -1,6 +1,7 @@
 
 import typing
 import time
+import regex
 from dataclasses import dataclass as dc
 
 import error
@@ -784,6 +785,18 @@ class AstDecl:
                 lifetype = 'sec'
 
             stream.expect('>')
+
+        #type annotation
+        if stream.peek() == ':':
+            stream.expect(':')
+            word = stream.pop()
+
+            reregegexx = regex.compile("Reg(ular)?[eE]x(p(ression)?)?")
+            if not reregegexx.match(word):
+                while stream.peek() != '=': stream.pop()
+            else:
+                stream.expect("<")
+                while stream.pop() != '>': pass
 
         if stream.peek() != '=':
             error.token(stream.popt(), "Expected `=`.")
