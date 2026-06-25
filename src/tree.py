@@ -786,7 +786,7 @@ class AstDecl:
             stream.expect('>')
 
         if stream.peek() != '=':
-            error.token(stream.pop(), "Expected `=`.")
+            error.token(stream.popt(), "Expected `=`.")
         stream.pop()
 
         expr = AstExpr.parse(stream)
