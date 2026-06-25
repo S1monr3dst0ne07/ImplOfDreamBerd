@@ -272,6 +272,36 @@ class AstLeaf:
                         
                     if reading_name: name += char
                     else: out.append(char)
+            case 'infix':
+                for char in string:
+                    if reading_name and char == currency.symbol:
+                        symbol_state = True
+                    if char == '{': #}
+                        reading_name = True
+                        continue
+                    if char == '}' and reading_name:
+                        reading_name = False
+
+                        iden, field = name.split(currency.symbol) 
+                        def _extract():
+                            if not symbol_state: return False
+                            if iden not in ctx.scope: return False
+                            value = ctx.scope[iden]
+                            if value.kind != 'dict': return False
+                            decoded = {k.render() : v for k,v in value.content.items()}
+                            if field not in decoded: return False
+
+                            out.append(decoded[field].render())
+                            return True
+                        
+                        if _extract():
+                            continue
+                        else:
+                            out.append('{')
+                            out.append(name)
+
+                    if reading_name: name += char
+                    else: out.append(char)
 
             case x:
                 error.internal(f"undefined currency kind: `{x}`")

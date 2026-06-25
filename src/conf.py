@@ -40,6 +40,8 @@ locale_currency_mapper = {
     #           name every locale.
     'de_DE': Currency("€", 'suffix'),
     'en_US': Currency("$", 'prefix'),
+    'en_GB': Currency("£", 'prefix'),
+    'ja_JP': Currency("¥", 'prefix'),
     'pt_CV': Currency("$", 'infix'),
 }
 
