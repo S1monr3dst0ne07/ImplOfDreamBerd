@@ -4,6 +4,7 @@ import time
 import regex
 from dataclasses import dataclass as dc
 
+import lex
 import error
 import sym
 import obj
@@ -999,19 +1000,64 @@ class AstStmt:
 
 @dc
 class AstProg:
-    content : AstBlock
+    # "files"
+    files : dict[str, AstBlock]
+
+    @staticmethod
+    def _anon_file_name_gen():
+        i = 0
+        while True:
+            yield f"anon_func_{i}"
+            i += 1
+
+    @staticmethod
+    def _extract_files(stream):
+        name = ""
+        name_gen = AstProg._anon_file_name_gen()
+
+        content_mapper : dict[str, lex.Streamer] = {}
+        content_buffer = []
+
+        # parse file into separate streamers
+        def emit():
+            nonlocal content_mapper, content_buffer, name
+            if name == "": name = next(name_gen)
+            content_mapper[name] = lex.Streamer(content_buffer)
+            content_buffer = []
+            name = word.strip("= ")
+
+        for token in stream.stream:
+            word = token.content
+            if word.startswith("=" * 5):
+                emit()
+            else:
+                content_buffer.append(token)
+        emit()
+
+        return content_mapper
     
     @classmethod
     def parse(cls, stream):
-        return cls(AstBlock.parse(stream, prog=True))
+        files = {}
+        for key, stream in cls._extract_files(stream).items():
+            files[key] = AstBlock.parse(stream, prog=True)
 
-    def run(self, ctx):
+        return cls(files)
+
+    def run(self):
+        for name, file in self.files.items():
+            self.run_file(file)
+
+    def run_file(self, file):
+        file.order() #whitespace based binary expression reordering
+        file.infer() #lifetime inferrence pass 
+
+        ctx = obj.Ctx()
         builtin.inject(ctx)
 
-        self.content.run(ctx)
-
-    def infer(self): self.content.infer()
-    def order(self): self.content.order()
+        ctx.load() #load persistent variables from database
+        file.run(ctx)
+        ctx.save() #save persistent variables back to database
 
             
 
