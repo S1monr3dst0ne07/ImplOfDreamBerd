@@ -118,13 +118,14 @@ class Builtin:
         # to make them accessible.
         for name, value in class_scope.locals.items():
             if value.kind != 'func': continue
-            print(name, value.kind)
+            Builtin.ctx.scope[name] = value
 
         #then construct class instance object
         content = {}
         for name, value in class_scope.locals.items():
             if value.kind == 'func': continue
             if value.kind == 'metafunc': continue
+            if value.kind == 'class': continue
             if value.kind == 'metaclass': continue
             content[name] = value
 
