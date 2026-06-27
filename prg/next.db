@@ -1,0 +1,11 @@
+
+const var score = [5]!
+
+function update(x) => {
+   score[-1] = score[-1] + 1!
+}
+
+addEventListener("click", update)!
+print(await next score[-1])! //6 (when you click)
+
+
