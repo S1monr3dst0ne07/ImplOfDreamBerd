@@ -29,6 +29,8 @@ class Value:
     stmt_alive : bool = True # local statement aliveness (updated by tree.AstBlock on schedule pass)
     time_born : int = -1 #unix timestamp of last variable conception
 
+    previous : "Value" = None
+
     def __hash__(self):
         match self.content:
             case list(): return hash(tuple(self.content))
@@ -51,6 +53,9 @@ class Value:
         if not self.assignable:
             error.error(f'Attempting to assign unassignable value: `{self.render()}`')
         self._mut(ctx)
+
+    def _pre_mut(self):
+        self.previous = copy.deepcopy(self)
 
     def _mut(self, ctx):
         ctx.mutate(self)

@@ -862,6 +862,8 @@ class AstAssign:
         dst = self.dst.run(ctx, lvalue=True)
         src = self.src.run(ctx)
 
+        dst._pre_mut()
+
         dst.content = src.content
         dst.kind    = src.kind
 

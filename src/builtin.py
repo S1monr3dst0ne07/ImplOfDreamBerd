@@ -48,11 +48,13 @@ class Builtin:
         )
 
     def pop(value):
+        value._pre_mut()
         elem = value.content.pop(0)
         value._edit()
         return elem
 
     def push(value, new):
+        value._pre_mut()
         value.content.append(new)
         value._edit()
         return Builtin._null()
@@ -93,6 +95,10 @@ class Builtin:
 
         return x
 
+    def previous(x):
+        return x.previous
+
+#technical info: await doesn't do anything.
 setattr(Builtin, "await", lambda x: x)
 
 
