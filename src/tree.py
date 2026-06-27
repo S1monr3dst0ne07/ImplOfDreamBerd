@@ -395,7 +395,8 @@ class AstUn:
     op : str
     sub : AstLeaf
 
-    def order(self): self.sub.order()
+    def order(self): 
+        return self
 
     @classmethod
     def parse(cls, stream):
