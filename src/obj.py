@@ -4,6 +4,7 @@ from dataclasses import field
 import dataclasses
 import typing
 import time
+import datetime
 import json
 import copy
 import redis
@@ -60,6 +61,10 @@ class Value:
     def _mut(self, ctx):
         ctx.mutate(self)
 
+        if self.kind == 'magictime':
+            with open(Config.time_offset, 'w') as f:
+                f.write(str(self.content))
+
     def alive(self):
         match self.lifetype:
             case 'default': return True
@@ -102,6 +107,11 @@ class Value:
             case 'class':
                 rendered = { k : v.render() for k, v in self.content.items()}
                 return f"<class {rendered}>"
+
+            case 'magictime':
+                return str(datetime.datetime.fromtimestamp(
+                    time.time() + (self.content / 1000) # ms to float secs
+                ))
 
             case x:
                 error.error(f"Unable to render type: `{x}`")

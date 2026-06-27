@@ -27,6 +27,9 @@ eternal var db: 192.168.178.68
 # default locale (locale.getlocale) is used if not specified.
 #locale :
 
+#time offset relative to `time.time()` based on locale time.
+time offset: db-time.txt
+
 """)
 
 
@@ -49,6 +52,7 @@ class Config:
     local_var_db   : str
     eternal_var_db : str
     locale         : str = locale.getlocale()[0]
+    time_offset    : str
 
 with open(META_CONFIG) as f:
     for k, v in yaml.safe_load(f).items():
@@ -59,5 +63,7 @@ if not os.path.exists(Config.local_var_db):
     with open(Config.local_var_db, 'w') as f:
         json.dump({}, f)
 
-
+if not os.path.exists(Config.time_offset):
+    with open(Config.time_offset, 'w') as f:
+        f.write('0')
 

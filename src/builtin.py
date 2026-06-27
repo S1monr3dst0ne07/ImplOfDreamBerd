@@ -4,6 +4,7 @@ import pynput
 
 import obj
 import error
+from conf import Config
 
 key_down_funcs = list()
 key_up_funcs   = list()
@@ -130,6 +131,14 @@ class Builtin:
             content[name] = value
 
         return obj.Value(content, kind='class')
+
+    def Date():
+        return Builtin._null()
+
+    def now(x):
+        with open(Config.time_offset, 'r') as f:
+            offset = int(f.read())
+        return obj.Value(content=offset, kind='magictime')
 
 
 

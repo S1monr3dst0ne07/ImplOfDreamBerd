@@ -541,6 +541,9 @@ class AstExpr:
                     case None:    kind = 'undefined' # aka NaN
                     case x: error.internal("binary expression on numeric values yielded non-numeric type.")
 
+                if 'magictime' in (left.kind, right.kind):
+                    kind = 'magictime'
+
             case '====':
                 #cursed ast comparison
                 kind = 'bool'
