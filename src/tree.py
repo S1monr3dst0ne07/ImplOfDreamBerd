@@ -309,7 +309,6 @@ class AstLeaf:
                 error.internal(f"undefined currency kind: `{x}`")
 
 
-        print(out)
         return obj.Value(
             content=[
                 obj.Value(content = x, kind = 'char')
@@ -1000,7 +999,15 @@ class AstStmt:
 
 @dc
 class AstProg:
-    # "files"
+    @dc
+    class File:
+        prog : AstBlock
+        ctx  : obj.Ctx
+        exports: list[tuple[
+            str, # function name
+            str, # target file
+        ]]
+
     files : dict[str, AstBlock]
 
     @staticmethod
@@ -1010,53 +1017,67 @@ class AstProg:
             yield f"anon_func_{i}"
             i += 1
 
-    @staticmethod
-    def _extract_files(stream):
+    @classmethod
+    def load(cls, path):
+        with open(path, 'r', encoding='utf-8') as f:
+            src = f.read()
+
         name = ""
         name_gen = AstProg._anon_file_name_gen()
 
-        content_mapper : dict[str, lex.Streamer] = {}
-        content_buffer = []
-
-        # parse file into separate streamers
-        def emit():
-            nonlocal content_mapper, content_buffer, name
-            if name == "": name = next(name_gen)
-            content_mapper[name] = lex.Streamer(content_buffer)
-            content_buffer = []
-            name = word.strip("= ")
-
-        for token in stream.stream:
-            word = token.content
-            if word.startswith("=" * 5):
-                emit()
-            else:
-                content_buffer.append(token)
-        emit()
-
-        return content_mapper
-    
-    @classmethod
-    def parse(cls, stream):
         files = {}
-        for key, stream in cls._extract_files(stream).items():
-            files[key] = AstBlock.parse(stream, prog=True)
+        buffer = []
+        exports = []
 
+        # parse files separately
+        def emit(line):
+            nonlocal buffer, name, files, exports
+            if name == "": name = next(name_gen)
+            if buffer != []:
+                stream = lex.tokenize("\n".join(buffer))
+                files[name] = AstProg.File(
+                    prog=AstBlock.parse(stream, prog=True), #program
+                    ctx=obj.Ctx(), #program execution context
+                    exports=exports, #exports of the program
+                )
+            buffer = []
+            exports = []
+            name = line.strip("= ")
+
+        for line in src.split('\n'):
+            if line.startswith('=' * 5): emit(line)
+                # technical info: the import statement doesn't do anything.
+            elif line.startswith('import'): pass
+            elif line.startswith('export'):
+                _, func_name, _, target = line.strip('!').split(' ')
+                target = target.strip('"')
+                exports.append((func_name, target))
+            else: buffer.append(line)
+        emit("")
+    
         return cls(files)
+
 
     def run(self):
         for name, file in self.files.items():
             self.run_file(file)
 
-    def run_file(self, file):
-        file.order() #whitespace based binary expression reordering
-        file.infer() #lifetime inferrence pass 
+    def run_file(self, file : "AstProg.File"):
+        self.run_prog(file.prog, file.ctx)
 
-        ctx = obj.Ctx()
+        #execute exports
+        for func, target in file.exports:
+            value = file.ctx.scope[func]
+            self.files[target].ctx.scope[func] = value
+
+    def run_prog(self, prog, ctx):
+        prog.order() #whitespace based binary expression reordering
+        prog.infer() #lifetime inferrence pass 
+
         builtin.inject(ctx)
 
         ctx.load() #load persistent variables from database
-        file.run(ctx)
+        prog.run(ctx)
         ctx.save() #save persistent variables back to database
 
             

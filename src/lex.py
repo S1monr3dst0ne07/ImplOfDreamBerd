@@ -81,10 +81,7 @@ class Streamer:
         return toks
 
 
-def tokenize(path):
-    with open(path, 'r', encoding='utf-8') as f:
-        src = f.read()
-
+def tokenize(src):
     "They get replaced with whitespace."
     src = src.replace('(', ' ').replace(')', ' ')
 
