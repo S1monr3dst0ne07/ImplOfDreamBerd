@@ -332,7 +332,7 @@ class AstLeaf:
     @classmethod
     def parse(cls, stream):
         match stream.peekt().kind:
-            case 'numb':  
+            case 'numb':
                 leaf = int(stream.pop())
                 kind = 'int'
                 if stream.peekt().kind == 'dot':
@@ -729,6 +729,35 @@ class AstBlock:
         return ctx.scheduler(lambda: self.run(ctx, offset, step))
 
 
+@dc
+class AstClass:
+    name : str
+    body : "AstBlock"
+
+    def order(self): self.body.order()
+    def infer(self): self.body.infer()
+
+    @classmethod
+    def parse(cls, stream):
+        stream.pop() # `class` or `className`
+
+        name = stream.pop()
+        body = AstBlock.parse(stream)
+        return cls(name, body)
+
+    def run(self, ctx):
+        ctx.scope[self.name] = obj.Value(
+            content = { 
+                'ast': self, 
+                'used': False  #has class object been instantiated?
+            },
+            kind = 'metaclass',
+        )
+
+
+
+
+
 
 
 @dc
@@ -798,9 +827,7 @@ class AstDecl:
                 stream.expect("<")
                 while stream.pop() != '>': pass
 
-        if stream.peek() != '=':
-            error.token(stream.popt(), "Expected `=`.")
-        stream.pop()
+        stream.expect('=')
 
         expr = AstExpr.parse(stream)
         return cls(editable, assignable, name, expr, lifetime, lifetype, eternal)
@@ -962,6 +989,10 @@ class AstStmt:
             case 'when', _:
                 sub = AstWhen.parse(stream)
                 need_eos = type(sub) is AstExpr
+
+            case 'class', _:
+                sub = AstClass.parse(stream)
+                need_eos = False
 
             case _, '[': #]
                 sub = AstAssign.parse_index_access(stream)

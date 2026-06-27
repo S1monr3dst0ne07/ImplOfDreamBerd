@@ -97,6 +97,12 @@ class Value:
             case 'dict':
                 return str({ k.render() : v.render() for k, v in self.content.items()})
 
+            case 'metaclass':
+                return "<metaclass object>"
+            case 'class':
+                rendered = { k : v.render() for k, v in self.content.items()}
+                return f"<class {rendered}>"
+
             case x:
                 error.error(f"Unable to render type: `{x}`")
 

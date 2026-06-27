@@ -3,6 +3,7 @@ import time
 import pynput
 
 import obj
+import error
 
 key_down_funcs = list()
 key_up_funcs   = list()
@@ -97,6 +98,41 @@ class Builtin:
 
     def previous(x):
         return x.previous
+
+    def new(x):
+        if x.kind != 'metaclass': return
+
+        ast = x.content['ast']
+        if x.content['used']:
+            error.error(f"Class `{ast.name}` is instantiated multiple times.")
+        
+        x.content['used'] = True
+            #construct new scope for content of class
+        Builtin.ctx.push_scope()
+        ast.body.run(Builtin.ctx)
+            #extract class scope
+        class_scope = Builtin.ctx.scope
+        Builtin.ctx.pop_scope()
+
+        #copy all class functions into super scope
+        # to make them accessible.
+        for name, value in class_scope.locals.items():
+            if value.kind != 'func': continue
+            print(name, value.kind)
+
+        #then construct class instance object
+        content = {}
+        for name, value in class_scope.locals.items():
+            if value.kind == 'func': continue
+            if value.kind == 'metafunc': continue
+            if value.kind == 'metaclass': continue
+            content[name] = value
+
+        return obj.Value(content, kind='class')
+
+
+
+
 
 #technical info: await doesn't do anything.
 setattr(Builtin, "await", lambda x: x)
