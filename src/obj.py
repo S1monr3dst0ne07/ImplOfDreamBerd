@@ -11,6 +11,7 @@ import redis
 
 import error
 from conf import Config
+import tree
 
 
 
@@ -31,6 +32,9 @@ class Value:
     time_born : int = -1 #unix timestamp of last variable conception
 
     previous : "Value" = None
+
+    def __post_init__(self):
+        self._check_deleted()
 
     def __hash__(self):
         match self.content:
@@ -59,11 +63,17 @@ class Value:
         self.previous = copy.deepcopy(self)
 
     def _mut(self, ctx):
+        self._check_deleted()
         ctx.mutate(self)
 
+        #`Date.now()` magic time value
         if self.kind == 'magictime':
             with open(Config.time_offset, 'w') as f:
                 f.write(str(self.content))
+
+    def _check_deleted(self):
+        if self in tree.deleted_values:
+            error.error(f"Value `{self.render()}` has been deleted.")
 
     def alive(self):
         match self.lifetype:

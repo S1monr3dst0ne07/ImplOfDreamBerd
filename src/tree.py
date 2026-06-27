@@ -13,6 +13,8 @@ import conf
 
 
 
+deleted_features = set()
+deleted_values   = list()
 
 # function calls and Variable accesses cannot be differentiated at parse-time.
 # hence they both are unified under the AstScopeAccess node type.
@@ -950,7 +952,37 @@ class AstFuncDef:
 
 
 
+@dc
+class AstDelete:
+    target : "AstExpr | None"
 
+    @classmethod
+    def parse(cls, stream):
+        stream.expect('delete')
+
+        target = None
+        match stream.peek():
+            case x if x in ('if', 'when', 'class', 'const', 'var', 'delete'):
+                deleted_features.add(x)
+                stream.pop()
+
+            case x if AstStmt._is_func_keyword(x): 
+                deleted_features.add('function')
+                stream.pop()
+
+            case x:
+                target = AstExpr.parse(stream)
+
+        return cls(target)
+
+    def order(self): 
+        if self.target is not None:
+            self.target.order()
+    def infer(self): pass
+
+    def run(self, ctx):
+        if self.target is not None:
+            deleted_values.append(self.target.run(ctx))
 
 
 @dc
@@ -997,6 +1029,9 @@ class AstStmt:
                 sub = AstClass.parse(stream)
                 need_eos = False
 
+            case 'delete', _:
+                sub = AstDelete.parse(stream)
+
             case _, '[': #]
                 sub = AstAssign.parse_index_access(stream)
 
@@ -1030,6 +1065,9 @@ class AstStmt:
             case "?": print(f"[DEBUG] {res.render()}")
 
         return res
+
+    
+
 
 @dc
 class AstProg:
