@@ -598,6 +598,9 @@ class AstIf:
 
     @classmethod
     def parse(cls, stream):
+        if 'if' in deleted_features:
+            error.error("Feature `if` has been deleted.")
+
         stream.expect('if')
         cond = AstExpr.parse(stream)
         body = AstStmt.parse(stream)
@@ -624,6 +627,9 @@ class AstWhen:
 
     @classmethod
     def parse(cls, stream):
+        if 'when' in deleted_features:
+            error.error("Feature `when` has been deleted.")
+
         stream.expect('when')
         cond = AstExpr.parse(stream)
         body = AstStmt.parse(stream)
@@ -744,6 +750,9 @@ class AstClass:
 
     @classmethod
     def parse(cls, stream):
+        if 'class' in deleted_features:
+            error.error("Feature `class` has been deleted.")
+
         stream.pop() # `class` or `className`
 
         name = stream.pop()
@@ -783,10 +792,18 @@ class AstDecl:
 
     @classmethod
     def parse(cls, stream):
-        assignable = {'const' : False, 'var' : True}[stream.pop()]
+        first_storage_type = stream.pop()
         if stream.peek() not in ('const', 'var'):
             error.token(stream.pop(), "`const` / `var` not followed by `const` / `var`.")
-        editable = {'const' : False, 'var' : True}[stream.pop()]
+        second_storage_type = stream.pop()
+
+        if 'const' in deleted_features and 'const' in (first_storage_type, second_storage_type):
+            error.error("Feature `const` has been deleted.")
+        if 'var' in deleted_features and 'var' in (first_storage_type, second_storage_type):
+            error.error("Feature `var` has been deleted.")
+
+        assignable = {'const' : False, 'var' : True}[first_storage_type]
+        editable   = {'const' : False, 'var' : True}[second_storage_type]
 
         # new for 2023!
         eternal = False
@@ -917,6 +934,9 @@ class AstFuncDef:
 
     @classmethod
     def parse(cls, stream):
+        if 'function' in deleted_features:
+            error.error("Functions have been deleted.")
+
         stream.pop()
         name = stream.pop()
 
@@ -958,6 +978,9 @@ class AstDelete:
 
     @classmethod
     def parse(cls, stream):
+        if 'delete' in deleted_features:
+            error.error("Deletions have themselves been deleted.")
+
         stream.expect('delete')
 
         target = None
