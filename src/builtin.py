@@ -1,17 +1,26 @@
 
 import time
-from pynput import keyboard
+import pynput
 
 import obj
 
 key_down_funcs = list()
 key_up_funcs   = list()
 key_encode_literal = lambda event: obj.Value(content=[obj.Value(content=event.char, kind='char')], kind='string')
-key_listener = keyboard.Listener(
+key_listener = pynput.keyboard.Listener(
     on_press    = lambda event: [x(key_encode_literal(event)) for x in key_down_funcs],
     on_release  = lambda event: [x(key_encode_literal(event)) for x in key_up_funcs],
 )
 key_listener.start()
+
+mouse_click_funcs = list()
+mouse_listener = pynput.mouse.Listener(
+    on_click = lambda event: [
+        x(obj.Value(content=None, kind='null')) 
+        for x in mouse_click_funcs
+    ]
+)
+mouse_listener.start()
 
 
 
@@ -19,10 +28,11 @@ class Builtin:
     ctx : obj.Ctx
 
     def addEventListener(event, func):
-        metafunc = lambda char: func.content.call(Builtin.ctx, [char])
+        metafunc = lambda param: func.content.call(Builtin.ctx, [param])
         match event.render():
-            case 'keydown': key_down_funcs.append(metafunc)
-            case 'keyup'  :   key_up_funcs.append(metafunc)
+            case 'keydown':    key_down_funcs.append(metafunc)
+            case 'keyup'  :      key_up_funcs.append(metafunc)
+            case 'click'  : mouse_click_funcs.append(metafunc)
 
 
     def print(value):
@@ -70,6 +80,20 @@ class Builtin:
     def eight():    return obj.Value(content= 8, kind='int')
     def nine():     return obj.Value(content= 9, kind='int')
     def ten():      return obj.Value(content=10, kind='int')
+
+    def current(x): return x
+
+    def next(x):
+        old = x.content
+
+        while old == x.content:
+            #yup, it just spinlocks :3
+            # hey! i never said that this was *good* implementation
+            time.sleep(0.1)
+
+        return x
+
+setattr(Builtin, "await", lambda x: x)
 
 
 def get_all():
