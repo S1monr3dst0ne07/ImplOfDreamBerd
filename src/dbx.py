@@ -3,6 +3,7 @@ from dataclasses import dataclass as dc
 
 import tree
 import obj
+import error
 
 
 @dc
@@ -58,6 +59,19 @@ class AstHtml:
                 case  _ : pop()
 
         segs.append(buffer)
+
+        #check `class` and `className`
+        for seg in segs:
+            if type(seg) is not str: continue
+            if "class" in seg:
+                error.error("Identifier `class` in HTML tag.")
+            if "className" in seg:
+                error.error("Identifier `className` in HTML tag.")
+
+        #rename `htmlClassName` to `class`
+        for i, seg in enumerate(segs):
+            if type(seg) is not str: continue
+            segs[i] = seg.replace('htmlClassName', 'class')
 
         return cls(segs)
         
