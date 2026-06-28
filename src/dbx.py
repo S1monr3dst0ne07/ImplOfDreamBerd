@@ -113,7 +113,6 @@ def maybe_app(files):
 
     app = ctx.scope['App']
     html = app.content.call(ctx, []).render()
-    print(html)
 
     path = '.app'
     with open(path, 'w') as f:
