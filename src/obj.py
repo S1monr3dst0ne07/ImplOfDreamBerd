@@ -215,6 +215,11 @@ class Ctx:
         decode_responses = True
     )
 
+    # execute offset
+    #  1 => execute forwards
+    # -1 => execute backwards
+    offset : int = 1
+
     def __post_init__(self):
         for key in self.redis.keys():
             self.eternal[key] = Value.from_json(

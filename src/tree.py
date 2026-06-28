@@ -713,7 +713,7 @@ class AstBlock:
             stmt.infer()
 
 
-    def run(self, ctx, offset=1, index=0):
+    def run(self, ctx, index=0):
         #update variable livenesses
         def update(name, state):
             if name not in ctx.scope:
@@ -730,15 +730,15 @@ class AstBlock:
 
         #actual statment execution
         res = self.stmts[index].run(ctx)
-        step = index + offset
+        step = index + ctx.offset
 
         #scheduler base case
-        if len(self.stmts) == step:
+        if len(self.stmts) == step or step < 0:
             return ctx.scheduler(lambda: res)
 
         #pass continuation into context scheduler.
         # this is some fucking haskell level programming right here.
-        return ctx.scheduler(lambda: self.run(ctx, offset, step))
+        return ctx.scheduler(lambda: self.run(ctx, step))
 
 
 @dc

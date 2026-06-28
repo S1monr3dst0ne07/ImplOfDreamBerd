@@ -140,6 +140,10 @@ class Builtin:
             offset = int(f.read())
         return obj.Value(content=offset, kind='magictime')
 
+    
+    def reverse():
+        Builtin.ctx.offset *= -1
+
 
 
 
