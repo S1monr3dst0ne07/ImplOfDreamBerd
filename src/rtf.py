@@ -67,6 +67,9 @@ def walkies(stream):
             case 'b': buffer += 'rtf_bold_'
             case 'i': buffer += 'rtf_ital_'
 
+            case '{': buffer += '{'
+            case '}': buffer += '}'
+
             #destructive command
             case 'fonttbl': emit = False
             case 'colortbl': emit = False
