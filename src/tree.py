@@ -1166,7 +1166,7 @@ class AstProg:
         with open(path, 'r', encoding='utf-8') as f:
             src = f.read()
 
-        name = ""
+        name = "main"
         name_gen = AstProg._anon_file_name_gen()
 
         files = {}
@@ -1205,6 +1205,8 @@ class AstProg:
     def run(self):
         for name, file in self.files.items():
             self.run_file(file)
+
+        return self.files
 
     def run_file(self, file : "AstProg.File"):
         self.run_prog(file.prog, file.ctx)

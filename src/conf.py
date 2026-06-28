@@ -30,6 +30,10 @@ eternal var db: 192.168.178.68
 #time offset relative to `time.time()` based on locale time.
 time offset: db-time.txt
 
+#default webbrowser for opening DBX apps.
+# `{file}` as the placehold.
+webbrowser: /usr/bin/firefox
+
 """)
 
 
@@ -53,6 +57,7 @@ class Config:
     eternal_var_db : str
     locale         : str = locale.getlocale()[0]
     time_offset    : str
+    webbrowser     : str
 
 with open(META_CONFIG) as f:
     for k, v in yaml.safe_load(f).items():

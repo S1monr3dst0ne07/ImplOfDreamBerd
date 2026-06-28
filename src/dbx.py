@@ -1,9 +1,11 @@
 
 from dataclasses import dataclass as dc
+import subprocess
 
 import tree
 import obj
 import error
+import conf
 
 
 @dc
@@ -99,6 +101,25 @@ class AstHtml:
             kind = 'string'
         )
 
+
+
+def maybe_app(files):
+    if 'main' not in files:
+        return
+
+    ctx = files['main'].ctx
+    if 'App' not in ctx.scope:
+        return
+
+    app = ctx.scope['App']
+    html = app.content.call(ctx, []).render()
+    print(html)
+
+    path = '.app'
+    with open(path, 'w') as f:
+        f.write(html)
+
+    subprocess.run([conf.Config.webbrowser, path])
 
 
 
