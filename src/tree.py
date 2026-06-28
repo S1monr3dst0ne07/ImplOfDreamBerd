@@ -110,8 +110,13 @@ class AstScopeAccess:
             return value.content(*params)
 
         #if the parameter counts don't match, it's a function literal
+        func_run_continue = lambda: value.content.call(ctx, params)
         if value.kind == 'func' and len(params) == len(value.content.params):
-            return value.content.call(ctx, params)
+            if value.content._async:
+                ctx.running_async = True
+                ctx.running_async_continue = func_run_continue
+            else:
+                return func_run_continue()
 
         #otherwise it has to have been a variable access
         return value
@@ -934,6 +939,8 @@ class AstFuncDef:
     params : list[str]
     body : AstBlock | AstExpr
 
+    _async : bool
+
     def order(self): 
         new = self.body.order()
         if type(self.body) is AstExpr:
@@ -943,7 +950,7 @@ class AstFuncDef:
         self.body.infer()
 
     @classmethod
-    def parse(cls, stream):
+    def parse(cls, stream, _async=False):
         if 'function' in deleted_features:
             error.error("Functions have been deleted.")
 
@@ -963,8 +970,7 @@ class AstFuncDef:
         else:
             body = AstExpr.parse(stream)
 
-        return cls(name, params, body)
-
+        return cls(name, params, body, _async)
 
     def run(self, ctx):
         ctx.scope[self.name] = obj.Value(self, kind='func')
@@ -979,6 +985,7 @@ class AstFuncDef:
 
         ctx.pop_scope()
         return res
+
 
 
 
@@ -1073,6 +1080,11 @@ class AstStmt:
 
             case x, name if cls._is_func_keyword(x) and name.isalpha():
                 sub = AstFuncDef.parse(stream)
+                need_eos = type(sub.body) is AstExpr
+
+            case 'async', _: #OMG LIKE DA BACKROOMS (sorry)
+                stream.expect('async')
+                sub = AstFuncDef.parse(stream, _async=True)
                 need_eos = type(sub.body) is AstExpr
 
             case x, y if all(i in ('const', 'var') for i in (x, y)):

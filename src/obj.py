@@ -220,6 +220,11 @@ class Ctx:
     # -1 => execute backwards
     offset : int = 1
 
+    running_async : bool = False
+    running_async_continue : typing.Callable = None
+    running_super_continue : typing.Callable = None
+    running_sync_flag : bool = False #true if next context call has to come from async block
+
     def __post_init__(self):
         for key in self.redis.keys():
             self.eternal[key] = Value.from_json(
@@ -281,6 +286,24 @@ class Ctx:
 
 
     def scheduler(self, continuation):
+        # for async functions
+        if self.running_async:
+            # pre-invert is necessary because
+            # self.running_{super, async}_continue acts are a tail calls,
+            # and code after it will only take effect after the entire
+            # block is executed.
+            self.running_sync_flag = not self.running_sync_flag
+
+            # the running_sync_flag just specified the interpretation
+            # of the block context from with the scheduler is called.
+            if not self.running_sync_flag:
+                self.running_async_continue = continuation
+                return self.running_super_continue()
+            else: # entry case
+                self.running_super_continue = continuation
+                return self.running_async_continue()
+
+
         return continuation()
 
 
