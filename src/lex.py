@@ -101,7 +101,10 @@ def tokenize(src):
 
         if buffer == '//': comment = True
 
-        if kind != state and state and not comment:
+        transit = kind != state #normal state transition
+        override = state in ('blockopen', 'blockclose', 'arrayopen', 'arrayclose') 
+            #override emit
+        if (transit or override) and state and not comment:
             if state != 'newline':
                 stream.append(Token(
                     buffer, state, line
