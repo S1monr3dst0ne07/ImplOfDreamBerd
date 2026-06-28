@@ -180,7 +180,7 @@ class AstIndexAccess:
     index : "AstExpr"
 
     def order(self):
-        self.index.order()
+        self.index = self.index.order()
 
     @classmethod
     def parse(cls, stream):

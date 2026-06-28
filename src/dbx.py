@@ -63,9 +63,9 @@ class AstHtml:
         
 
     def order(self):
-        for seg in self.segs:
+        for i, seg in enumerate(self.segs):
             if type(seg) is not str:
-                seg.order()
+                self.segs[i] = seg.order()
 
     def run(self, ctx):
         out = ""
