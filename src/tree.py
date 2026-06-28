@@ -1058,7 +1058,7 @@ class AstStmt:
                 sub = AstWhen.parse(stream)
                 need_eos = type(sub) is AstExpr
 
-            case 'class', _:
+            case ('class', _) | ('className', _):
                 sub = AstClass.parse(stream)
                 need_eos = False
 
