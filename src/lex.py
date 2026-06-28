@@ -11,6 +11,7 @@ def get_kind(char):
         case '"': return 'quote'
         case "'": return 'quote'
         case '!': return 'eos'
+        case '¡': return 'eos'
         case '?': return 'debug'
         case ' ': return 'space'
         case '{': return 'blockopen'

@@ -1089,7 +1089,7 @@ class AstStmt:
                 error.token(token, "End of line is not `!` or `?`.")
 
         if type(sub) is AstDecl:
-            sub.priority = eos.count('!')
+            sub.priority = eos.count('!') - eos.count('¡')
 
         stream.space()
         return cls(sub, eos)
