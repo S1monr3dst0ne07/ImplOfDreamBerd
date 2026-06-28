@@ -10,6 +10,7 @@ import sym
 import obj
 import builtin
 import conf
+import dbx
 
 
 
@@ -374,6 +375,9 @@ class AstLeaf:
                     value = AstIndexAccess.parse(stream)
                 else:
                     value = AstScopeAccess.parse(stream)
+
+            case 'lifeopen':
+                value = dbx.AstHtml.parse(stream)
 
             case x: error.error(f"Unknown leaf kind: {stream.popt()}")
 
