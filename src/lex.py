@@ -24,6 +24,7 @@ def get_kind(char):
         case '\n': return 'newline'
         case x if x.isdigit(): return 'numb'
         case x if x.isalpha(): return 'iden'
+        case '_':              return 'iden'
         case _: return 'sym'
 
 

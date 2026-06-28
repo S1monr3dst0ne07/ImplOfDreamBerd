@@ -37,13 +37,13 @@ class AstScopeAccess:
             self.params[i] = param.order()
 
 
-    def _can_param_token(word):
-        if word.isdigit(): return True
-        if word.isalpha(): return True
+    def _can_param_token(stream):
+        match stream.peekt().kind:
+            case 'numb' | 'iden' | 'quote':
+                return True
 
-        if word in ('"', "'"): return True
-
-        return False
+            case _:
+                return False
 
     @classmethod
     def parse(cls, stream):
@@ -57,7 +57,7 @@ class AstScopeAccess:
             subj, iden = iden, stream.pop()
 
         #if stream.peek().isdigit() or stream.peekt().content not in (sym.op + sym.un_op + sym.block):
-        if cls._can_param_token(stream.peek()):
+        if cls._can_param_token(stream):
             # this check is needed to prevent `x + 5` from
             # being parsed as `x(+) 5`
 
