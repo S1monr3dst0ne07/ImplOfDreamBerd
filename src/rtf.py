@@ -63,6 +63,10 @@ def walkies(stream):
             case 'u8221': buffer += ['"']
             case 'par': buffer += '\n'
 
+            # wow the fancy stuff right here
+            case 'b': buffer += 'rtf_bold_'
+            case 'i': buffer += 'rtf_ital_'
+
             #destructive command
             case 'fonttbl': emit = False
             case 'colortbl': emit = False
