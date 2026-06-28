@@ -33,6 +33,9 @@ class Value:
 
     previous : "Value" = None
 
+    # how many bangs on the decl statement
+    priority : int = 0
+
     def __post_init__(self):
         self._check_deleted()
 

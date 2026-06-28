@@ -788,6 +788,9 @@ class AstDecl:
     # "immutable data"
     eternal : bool
 
+    # how many exclaimation mark
+    priority : int = 0
+
     def order(self): self.expr = self.expr.order()
     def infer(self): pass
 
@@ -857,6 +860,11 @@ class AstDecl:
 
 
     def run(self, ctx):
+        # make priority is followed
+        if self.name in ctx.scope:
+            if ctx.scope[self.name].priority > self.priority:
+                return
+
         init = self.expr.run(ctx)
 
         init.editable = self.editable
@@ -865,6 +873,7 @@ class AstDecl:
         ctx.scope[self.name] = init
         ctx.scope[self.name].lifetime = self.lifetime
         ctx.scope[self.name].lifetype = self.lifetype
+        ctx.scope[self.name].priority = self.priority
 
         # register local creation time
         ctx.scope[self.name].time_born = time.time()
@@ -1078,6 +1087,9 @@ class AstStmt:
             eos = token.content
             if token.kind not in ('eos', 'debug'):
                 error.token(token, "End of line is not `!` or `?`.")
+
+        if type(sub) is AstDecl:
+            sub.priority = eos.count('!')
 
         stream.space()
         return cls(sub, eos)
