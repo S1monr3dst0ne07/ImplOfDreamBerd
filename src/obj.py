@@ -266,7 +266,14 @@ class Ctx:
         self.stack.append(self.scope.copy())
 
     def pop_scope(self):
+        inner = self.scope
         self.scope = self.stack.pop()
+
+        #copy global from inner to outer scope
+        for name, value in inner.locals.items():
+            if not name.startswith('g_'): continue
+            self.scope[name] = value
+
 
     def scheduler(self, continuation):
         return continuation()
