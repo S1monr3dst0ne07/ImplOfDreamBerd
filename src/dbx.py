@@ -2,6 +2,7 @@
 from dataclasses import dataclass as dc
 
 import tree
+import obj
 
 
 @dc
@@ -61,11 +62,28 @@ class AstHtml:
         return cls(segs)
         
 
+    def order(self):
+        for seg in self.segs:
+            if type(seg) is not str:
+                seg.order()
 
+    def run(self, ctx):
+        out = ""
+        for seg in self.segs:
+            if type(seg) is str:
+                out += seg
+            else:
+                out += seg.run(ctx).render()
 
-
-
-
+        return obj.Value(
+            content = [
+                obj.Value(
+                    content = char,
+                    kind = 'char'
+                ) for char in out
+            ],
+            kind = 'string'
+        )
 
 
 

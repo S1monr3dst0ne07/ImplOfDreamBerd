@@ -215,7 +215,7 @@ class AstIndexAccess:
 
 @dc
 class AstLeaf:
-    META_VALUES = (AstScopeAccess, AstLitArray, AstLitDict, AstIndexAccess)
+    META_VALUES = (AstScopeAccess, AstLitArray, AstLitDict, AstIndexAccess, dbx.AstHtml)
     value : typing.Any
 
     def infer(self): pass
