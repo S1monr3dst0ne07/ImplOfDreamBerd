@@ -5,14 +5,20 @@ import tree
 import obj
 import conf
 import dbx
-
+import rtf
 
 def main():
     path = sys.argv[1]
 
+    with open(path, 'r', encoding='utf-8') as f:
+        src = f.read()
+
+    # rich text preprocessing
+    if path.endswith('.rtf'):
+        src = rtf.preprocess(src)
 
     try:
-        root = tree.AstProg.load(path)
+        root = tree.AstProg.load(src)
         files = root.run()
 
         # check and maybe open app

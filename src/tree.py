@@ -1162,10 +1162,7 @@ class AstProg:
             i += 1
 
     @classmethod
-    def load(cls, path):
-        with open(path, 'r', encoding='utf-8') as f:
-            src = f.read()
-
+    def load(cls, src):
         name = "main"
         name_gen = AstProg._anon_file_name_gen()
 
