@@ -145,6 +145,12 @@ class Builtin:
         Builtin.ctx.offset *= -1
 
 
+    def use(initial):
+        return obj.Value(
+            content = initial,
+            kind = 'signal',
+        )
+
 
 
 

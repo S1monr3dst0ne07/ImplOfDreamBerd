@@ -109,6 +109,12 @@ class AstScopeAccess:
             # calls as function if type if iden in scope is metafunc
             return value.content(*params)
 
+        if value.kind == 'signal':
+            if len(params) > 0:
+                value.content = params[0]
+
+            return value.content
+
         #if the parameter counts don't match, it's a function literal
         func_run_continue = lambda: value.content.call(ctx, params)
         if value.kind == 'func' and len(params) == len(value.content.params):
@@ -784,7 +790,7 @@ class AstClass:
 class AstDecl:
     editable   : bool
     assignable : bool
-    name : str
+    names : set[str]
     expr : AstExpr
 
     lifetime : int | None
@@ -798,6 +804,20 @@ class AstDecl:
 
     def order(self): self.expr = self.expr.order()
     def infer(self): pass
+
+    @staticmethod
+    def _extract_names(stream):
+        if stream.peek() == '[': #]
+            stream.expect('[')
+            first = AstDecl._extract_names(stream)
+            stream.expect(',')
+            second = AstDecl._extract_names(stream)
+            stream.expect(']')
+            return first | second
+
+        else:
+            return { stream.pop() }
+
 
     @classmethod
     def parse(cls, stream):
@@ -820,8 +840,7 @@ class AstDecl:
             stream.expect('const')
             eternal = True
             
-
-        name = stream.pop()
+        names = cls._extract_names(stream)
 
         lifetime = None
         lifetype = 'default'
@@ -861,31 +880,32 @@ class AstDecl:
         stream.expect('=')
 
         expr = AstExpr.parse(stream)
-        return cls(editable, assignable, name, expr, lifetime, lifetype, eternal)
+        return cls(editable, assignable, names, expr, lifetime, lifetype, eternal)
 
 
     def run(self, ctx):
-        # make priority is followed
-        if self.name in ctx.scope:
-            if ctx.scope[self.name].priority > self.priority:
-                return
-
         init = self.expr.run(ctx)
 
         init.editable = self.editable
         init.assignable = self.assignable
 
-        ctx.scope[self.name] = init
-        ctx.scope[self.name].lifetime = self.lifetime
-        ctx.scope[self.name].lifetype = self.lifetype
-        ctx.scope[self.name].priority = self.priority
+        for name in self.names:
+            # make priority is followed
+            if name in ctx.scope:
+                if ctx.scope[name].priority > self.priority:
+                    return
 
-        # register local creation time
-        ctx.scope[self.name].time_born = time.time()
+            ctx.scope[name] = init
+            ctx.scope[name].lifetime = self.lifetime
+            ctx.scope[name].lifetype = self.lifetype
+            ctx.scope[name].priority = self.priority
 
-        # upload variable to database if eternal
-        if self.eternal: ctx.eternal_upload(self.name)
-        
+            # register local creation time
+            ctx.scope[name].time_born = time.time()
+
+            # upload variable to database if eternal
+            if self.eternal: ctx.eternal_upload(name)
+            
 
 
 
