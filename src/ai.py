@@ -25,15 +25,12 @@ def preprocess(src):
         quote_depth = 0
 
         paren_depth = 0
-        curly_depth = 0
         
         last = None 
         for char in line + '\0':
             match char:
                 case '(': paren_depth += 1
                 case ')': paren_depth -= 1
-                case '{': curly_depth += 1
-                case '}': curly_depth -= 1
                 case x if x in quotes:
                     quote_size += quotes[char]
 
@@ -52,19 +49,7 @@ def preprocess(src):
 
         out += line 
         out += ('"' * (quote_depth >> 1)) + ("'" if quote_depth & 1 else "")
-        out += '}' * (curly_depth if curly_depth > 0 else 0)
         out += ')' * (paren_depth if paren_depth > 0 else 0)
-
-        def _eos():
-            nonlocal line, out
-            if line.endswith('!'): return
-            if line.endswith('¡'): return
-            if line.endswith('?'): return
-            out += '!'
-        
-        if line.strip() != "":
-            _eos()
-
         out += '\n'
         
     return out                    
