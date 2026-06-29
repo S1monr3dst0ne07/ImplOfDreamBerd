@@ -1176,7 +1176,8 @@ class AstProg:
 
     @classmethod
     def load(cls, src):
-        name = "main"
+        default_name = 'main'
+        name = default_name
         name_gen = AstProg._anon_file_name_gen()
 
         files = {}
@@ -1186,7 +1187,7 @@ class AstProg:
         # parse files separately
         def emit(line):
             nonlocal buffer, name, files, exports
-            if name == "": name = next(name_gen)
+            if name == default_name: name = next(name_gen)
             if buffer != []:
                 stream = lex.tokenize("\n".join(buffer))
                 files[name] = AstProg.File(
@@ -1206,7 +1207,8 @@ class AstProg:
                 _, func_name, _, target = line.strip('!').split(' ')
                 target = target.strip('"')
                 exports.append((func_name, target))
-            else: buffer.append(line)
+            elif line.strip() != "": 
+                buffer.append(line)
         emit("")
     
         return cls(files)
