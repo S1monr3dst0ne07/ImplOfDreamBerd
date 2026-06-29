@@ -108,7 +108,7 @@ def walkies(stream):
             case 'normal' if word == "HYPERLINK":
                 hyperlink = 'href'
 
-            case 'normal':
+            case 'normal' | 'close':
                 _normal_emit()
 
 
