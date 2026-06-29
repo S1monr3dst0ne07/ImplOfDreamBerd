@@ -714,7 +714,9 @@ class AstBlock:
             offset_offset = (-1 if timetravel else 1)
             offset = offset_offset
             for _ in range(abs(decl.lifetime)):
-                self.stmt_alive[index + offset].add(decl.name)
+                target = index + offset
+                if abs(target) < len(self.stmt_alive):
+                    self.stmt_alive[target].add(decl.name)
                 offset += offset_offset
 
         #compute compliment (insert deep quote about yin and yang or smth)
