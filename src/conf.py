@@ -72,7 +72,7 @@ class Config:
     webbrowser     : str = '/usr/bin/firefox'
     ai             : bool = True
     ai_writeback   : bool = False
-    ai_email       : str = ''
+    ai_email       : str = None
 
 with open(META_CONFIG) as f:
     for k, v in yaml.safe_load(f).items():

@@ -17,7 +17,7 @@ def main():
 
     # AI preprocessing
     if conf.Config.ai:
-        error.Report.src = src
+        error.src = src
         src = ai.preprocess(src)
 
         if conf.Config.ai_writeback:
