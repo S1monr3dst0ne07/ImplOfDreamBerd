@@ -25,12 +25,15 @@ def preprocess(src):
         quote_depth = 0
 
         paren_depth = 0
+        curly_depth = 0
         
         last = None 
         for char in line + '\0':
             match char:
                 case '(': paren_depth += 1
                 case ')': paren_depth -= 1
+                case '{': curly_depth += 1
+                case '}': curly_depth -= 1
                 case x if x in quotes:
                     quote_size += quotes[char]
 
@@ -43,11 +46,13 @@ def preprocess(src):
                 elif quote_size == quote_depth:
                     #end of string
                     quote_depth = 0
+                    quote_size = 0
 
             last = char
 
         out += line 
         out += ('"' * (quote_depth >> 1)) + ("'" if quote_depth & 1 else "")
+        out += '}' * (curly_depth if curly_depth > 0 else 0)
         out += ')' * (paren_depth if paren_depth > 0 else 0)
         
         if line.strip() != "" and "!" not in line:
