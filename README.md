@@ -11,5 +11,10 @@ There may be bug.
 
 
 Showcase video: [https://youtu.be/fS2Xg8Zcnqg](https://youtu.be/fS2Xg8Zcnqg)
+Deepdive video: [https://youtu.be/S8Q6IIKQHZ4](https://youtu.be/S8Q6IIKQHZ4)
 
+
+# Notice
+All of the source in this repo has been written by my own two paws.
+**None** of it has interacted with any kind of gen-AI and i intented to keep it that way.
 
