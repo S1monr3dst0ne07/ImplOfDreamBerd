@@ -46,10 +46,12 @@ class Streamer:
 
     def peekt(self, nocheck=False):
         if not nocheck: self._check()
+        if self.stream == []: error.error("Premature end of token stream.")
         return self.stream[0]
 
     def popt(self, nocheck=False):
         if not nocheck: self._check()
+        if self.stream == []: error.error("Premature end of token stream.")
         return self.stream.pop(0)
 
     def peek(self):
