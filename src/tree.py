@@ -711,10 +711,11 @@ class AstBlock:
             decl = stmt.sub
 
             timetravel = decl.lifetime < 0
-            offset = (-1 if timetravel else 0)
+            offset_offset = (-1 if timetravel else 1)
+            offset = offset_offset
             for _ in range(abs(decl.lifetime)):
                 self.stmt_alive[index + offset].add(decl.name)
-                offset += (-1 if timetravel else 1)
+                offset += offset_offset
 
         #compute compliment (insert deep quote about yin and yang or smth)
         for index, stmt in enumerate(self.stmts):
