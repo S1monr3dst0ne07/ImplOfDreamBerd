@@ -795,6 +795,7 @@ class AstDecl:
     editable   : bool
     assignable : bool
     names : set[str]
+    name : str # "proper name"
     expr : AstExpr
 
     lifetime : int | None
@@ -805,6 +806,7 @@ class AstDecl:
 
     # how many exclaimation mark
     priority : int = 0
+
 
     def order(self): self.expr = self.expr.order()
     def infer(self): pass
@@ -884,7 +886,17 @@ class AstDecl:
         stream.expect('=')
 
         expr = AstExpr.parse(stream)
-        return cls(editable, assignable, names, expr, lifetime, lifetype, eternal)
+        return cls(
+            editable=editable, 
+            assignable=assignable, 
+            names=names, 
+            name = list(names)[0],
+            expr=expr, 
+            lifetime=lifetime, 
+            lifetype=lifetype, 
+            eternal=eternal
+        )
+
 
 
     def run(self, ctx):
