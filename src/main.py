@@ -6,12 +6,23 @@ import obj
 import conf
 import dbx
 import rtf
+import ai
+import error
 
 def main():
     path = sys.argv[1]
 
     with open(path, 'r', encoding='utf-8') as f:
         src = f.read()
+
+    # AI preprocessing
+    if conf.Config.ai:
+        error.Report.src = src
+        src = ai.preprocess(src)
+
+        if conf.Config.ai_writeback:
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(src)
 
     # rich text preprocessing
     if path.endswith('.rtf'):

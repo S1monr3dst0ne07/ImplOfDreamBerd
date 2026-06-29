@@ -34,6 +34,18 @@ time offset: db-time.txt
 # `{file}` as the placehold.
 webbrowser: /usr/bin/firefox
 
+#automatic insertion
+ai: yes
+
+#should automatic insertion write its change
+# back to the source file?
+ai writeback: no
+
+#ai email, to which incomplete code
+# will be mailed to. leave blank to disable feature.
+# (Lu's email is `lu@todepond.com` plz don't annoy them.)
+ai email:
+
 """)
 
 
@@ -53,11 +65,14 @@ locale_currency_mapper = {
 }
 
 class Config:
-    local_var_db   : str
-    eternal_var_db : str
+    local_var_db   : str = 'db-var.json'
+    eternal_var_db : str = '127.0.0.1'
     locale         : str = locale.getlocale()[0]
-    time_offset    : str
-    webbrowser     : str
+    time_offset    : str = 'db-time.txt'
+    webbrowser     : str = '/usr/bin/firefox'
+    ai             : bool = True
+    ai_writeback   : bool = False
+    ai_email       : str = ''
 
 with open(META_CONFIG) as f:
     for k, v in yaml.safe_load(f).items():
