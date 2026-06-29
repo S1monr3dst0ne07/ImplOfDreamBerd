@@ -1188,8 +1188,9 @@ class AstProg:
         def emit(line):
             nonlocal buffer, name, files, exports
             if name == default_name: name = next(name_gen)
-            if buffer != []:
-                stream = lex.tokenize("\n".join(buffer))
+            file = "\n".join(buffer)
+            if file.strip() != "":
+                stream = lex.tokenize(file)
                 files[name] = AstProg.File(
                     prog=AstBlock.parse(stream, prog=True), #program
                     ctx=obj.Ctx(), #program execution context
@@ -1207,8 +1208,7 @@ class AstProg:
                 _, func_name, _, target = line.strip('!').split(' ')
                 target = target.strip('"')
                 exports.append((func_name, target))
-            elif line.strip() != "": 
-                buffer.append(line)
+            else: buffer.append(line)
         emit("")
     
         return cls(files)
