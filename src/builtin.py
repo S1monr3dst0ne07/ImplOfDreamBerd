@@ -37,9 +37,6 @@ class Builtin:
             case 'click'  : mouse_click_funcs.append(metafunc)
 
 
-    def print(value):
-        print(value.render())
-        return "<print>"
 
     def _null():
         return obj.Value(
@@ -48,6 +45,10 @@ class Builtin:
             editable = False,
             assignable = True,
         )
+
+    def print(value):
+        print(value.render())
+        return Builtin._null()
 
     def pop(value):
         value._pre_mut()

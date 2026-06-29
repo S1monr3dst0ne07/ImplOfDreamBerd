@@ -54,9 +54,16 @@ def preprocess(src):
         out += ('"' * (quote_depth >> 1)) + ("'" if quote_depth & 1 else "")
         out += '}' * (curly_depth if curly_depth > 0 else 0)
         out += ')' * (paren_depth if paren_depth > 0 else 0)
-        
-        if line.strip() != "" and "!" not in line:
+
+        def _eos():
+            nonlocal line, out
+            if line.endswith('!'): return
+            if line.endswith('¡'): return
+            if line.endswith('?'): return
             out += '!'
+        
+        if line.strip() != "":
+            _eos()
 
         out += '\n'
         
