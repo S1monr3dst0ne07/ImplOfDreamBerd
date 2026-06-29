@@ -8,6 +8,7 @@ from dataclasses import dataclass as dc
 def tokenize(src) -> "iterator":
     buffer = ""
     state = None
+    string = False
     for char in src + '\0':
         match char:
             case '{': kind = 'bopen' #}
@@ -18,10 +19,14 @@ def tokenize(src) -> "iterator":
             case x if x.isalpha(): kind = 'alpha'
             case x if x.isdigit(): kind = 'digit'
             case "'": kind = 'single'
+            case '"': kind = 'string'
             case '\0': kind = 'terminator'
             case _: kind = 'symb'
 
-        emit = state != kind
+        if state == 'string':
+            string = not string
+
+        emit = (state != kind) and (not string)
         override = state in ('bopen', 'bclose', 'newline')
 
         def _emit():
@@ -44,6 +49,8 @@ def tokenize(src) -> "iterator":
 
 
 
+# hyperlink status used for hyperlink parsing
+hyperlink = 'normal'
 
 # *collars and leashes you* let's go for walkies!
 # (i think i'm loosing it)
@@ -51,6 +58,7 @@ def walkies(stream):
     #some block can be ignored.
     # for example, metadata blocks
     emit = True
+
 
     buffer = []
     def _read_cmd(cmd):
@@ -74,11 +82,35 @@ def walkies(stream):
             case 'fonttbl': emit = False
             case 'colortbl': emit = False
             case 'stylesheet': emit = False
-            case '*': emit = False
+            case 'generator': emit = False
+            case 'ftnsep': emit = False
 
+    global hyperlink
     def _read_word(word):
         nonlocal buffer
-        buffer.append(word)
+        global hyperlink
+
+        #normal word emit
+        def _normal_emit():
+            nonlocal buffer
+            buffer.append(word)
+
+        match hyperlink:
+            case 'open':
+                _normal_emit()
+                if word.strip(): 
+                    hyperlink = 'close'
+
+            case 'href' if word.strip():
+                buffer.append(f"<a href={word}>")
+                hyperlink='open'
+
+            case 'normal' if word == "HYPERLINK":
+                hyperlink = 'href'
+
+            case 'normal':
+                _normal_emit()
+
 
     while True: 
         word = next(stream)
@@ -100,6 +132,12 @@ def walkies(stream):
                 _read_word(word)
 
         last = word
+
+    #on block close, after reading content of hyperlink,
+    # the anchor tag must be closed.
+    if hyperlink == 'close':
+        buffer.append('</a>')
+        hyperlink = 'normal'
 
     return buffer if emit else []
 
