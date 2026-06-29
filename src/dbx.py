@@ -39,10 +39,16 @@ class AstHtml:
                 tag_depth += 1
 
             #consume all parameters
+            backslash = False
             while True:
-                match pop():
-                    case '>': break
-                    case '/': tag_depth -= 1
+                word = pop()
+
+                if word == '>':
+                    if backslash:
+                        tag_depth -= 1
+                    break
+
+                backslash = word == '/'
 
         def scan_embed_expr():
             nonlocal buffer
