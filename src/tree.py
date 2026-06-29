@@ -1187,7 +1187,7 @@ class AstProg:
         # parse files separately
         def emit(line):
             nonlocal buffer, name, files, exports
-            if name == default_name: name = next(name_gen)
+            if name == "": name = next(name_gen)
             file = "\n".join(buffer)
             if file.strip() != "":
                 stream = lex.tokenize(file)
