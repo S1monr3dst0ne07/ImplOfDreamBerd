@@ -52,14 +52,14 @@ class Builtin:
 
     def pop(value):
         value._pre_mut()
-        elem = value.content.pop(0)
-        value._edit()
+        elem = value.content.pop(-1)
+        value._edit(Builtin.ctx)
         return elem
 
     def push(value, new):
         value._pre_mut()
         value.content.append(new)
-        value._edit()
+        value._edit(Builtin.ctx)
         return Builtin._null()
 
     def true():
