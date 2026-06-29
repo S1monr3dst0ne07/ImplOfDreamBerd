@@ -101,8 +101,8 @@ class AstScopeAccess:
             return self._process_string_without_quote(ctx)
 
         params = (
-            [self._var_lookup(ctx, self.subj)] if self.subj else [] + 
-            [x.run(ctx) for x in self.params]
+            ([self._var_lookup(ctx, self.subj)] if self.subj is not None else []) + 
+             [x.run(ctx) for x in self.params]
         )
         value = self._var_lookup(ctx, self.iden)
 
