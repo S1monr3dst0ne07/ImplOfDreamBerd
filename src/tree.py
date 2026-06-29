@@ -413,6 +413,8 @@ class AstUn:
     def order(self): 
         return self
 
+    def infer(self): pass
+
     @classmethod
     def parse(cls, stream):
         if stream.peek() not in sym.un_op:
