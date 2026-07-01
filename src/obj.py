@@ -54,12 +54,12 @@ class Value:
 
     def _edit(self, ctx):
         if not self.editable:
-            error.error(f'Attempting to edit uneditable value: `{self.render()}`')
+            error.error(f'Attempting to edit uneditable value: `{self.previous.render()}`')
         self._mut(ctx)
 
     def _assign(self, ctx):
         if not self.assignable:
-            error.error(f'Attempting to assign unassignable value: `{self.render()}`')
+            error.error(f'Attempting to assign unassignable value: `{self.previous.render()}`')
         self._mut(ctx)
 
     def _pre_mut(self):
