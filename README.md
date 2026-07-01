@@ -4,13 +4,14 @@
 
 This is an implementation of the DreamBird / GOM programming language.
 It tries to be as specifications compliant as possible.
-All (theoretically possible) features explicitly mentioned
-in the original specifications documents has been implemented. (to my knowledge)
-There may be bug.
+All theoretically possible features, explicitly mentioned
+in the original document, have been implemented (to my knowledge).
+There may be bugs.
 
 
 
-Showcase video: [https://youtu.be/fS2Xg8Zcnqg](https://youtu.be/fS2Xg8Zcnqg)
+Showcase video: [https://youtu.be/bFLKOCFf_kk](https://youtu.be/bFLKOCFf_kk)
+
 Deepdive video: [https://youtu.be/S8Q6IIKQHZ4](https://youtu.be/S8Q6IIKQHZ4)
 
 
