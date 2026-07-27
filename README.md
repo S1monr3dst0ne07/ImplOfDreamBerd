@@ -1,6 +1,6 @@
 
 
-# ImplOfDreamBird
+# ImplOfDreamBerd
 
 This is an implementation of the DreamBird / GOM programming language.
 It tries to be as specifications compliant as possible.
